@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Imunoterapia</title>
+  
+  <!-- Referências aos ficheiros CSS -->
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <!-- Header e navegação -->
+  <header>
+    <nav>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Sobre</a></li>
+        <li><a href="#">Contatos</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Container principal -->
+  <div class="container">
+    <!-- Card de conteúdo -->
+    <div class="card">
+      <h1>Gestão de Imunoterapia</h1>
+
+      <!-- Exemplo de formulário -->
+      <form class="form">
+        <div class="form-row">
+          <label for="paciente">Nome do Paciente</label>
+          <input type="text" id="paciente" name="paciente" required>
+        </div>
+        
+        <div class="form-row">
+          <label for="data">Data de Nascimento</label>
+          <input type="date" id="data" name="data">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn">Salvar</button>
+        </div>
+      </form>
+
+      <!-- Exemplo de tabela -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Paciente</th>
+            <th>Data</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>João Silva</td>
+            <td>12/10/2025</td>
+            <td>Ativo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 Imunoterapia - Todos os direitos reservados.</p>
+  </footer>
+</body>
+</html>

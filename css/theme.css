@@ -1,0 +1,12 @@
+:root {
+  --bg: #0f1115;
+  --surface: #151922;
+  --primary: #4f8cff;
+  --primary-2: #2f6fff;
+  --text: #e9eef7;
+  --muted: #aab4c0;
+  --font: system-ui, sans-serif;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+}

@@ -1,0 +1,37 @@
+.btn {
+  background: var(--primary);
+  color: #06101f;
+  padding: 12px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn:hover {
+  background: var(--primary-2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th, .table td {
+  padding: var(--s-3);
+  border-bottom: 1px solid #2a3140;
+}
+
+.table th {
+  text-align: left;
+  font-weight: bold;
+  background-color: #2a3140;
+}
+
+.table td:hover {
+  background-color: #2f6fff;
+}
