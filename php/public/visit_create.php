@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
 if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['doctors'])) $_SESSION['doctors'] = [];
+if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
 if (!isset($_SESSION['consultations'])) $_SESSION['consultations'] = [];
 if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
@@ -22,12 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $dt_start     = trim($_POST['datetime_start'] ?? '');
   $dt_end       = trim($_POST['datetime_end'] ?? ''); // pode vir vazio
 
+  // só obrigatório para administration
+  $product_id = (int)($_POST['product_id'] ?? 0);
+
   if ($visit_type !== 'consultation' && $visit_type !== 'administration') {
     redirect_with_error('Tipo de visita inválido');
   }
+
   if ($patient_id <= 0 || $doctor_id <= 0) {
     redirect_with_error('Seleciona paciente e médico');
   }
+
   if ($dt_scheduled === '' || $dt_start === '') {
     redirect_with_error('Preenche data/hora agendada e data/hora de início');
   }
@@ -50,13 +56,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   if (!$doctorExists) redirect_with_error('Médico inválido');
 
+  // Se for administration: produto obrigatório + existe + regra das 5 utilizações
+  if ($visit_type === 'administration') {
+    if ($product_id <= 0) {
+      redirect_with_error('Escolhe um produto');
+    }
+
+    $productExists = false;
+    foreach ($_SESSION['products'] as $pr) {
+      if ((int)($pr['product_id'] ?? 0) === $product_id) { $productExists = true; break; }
+    }
+    if (!$productExists) {
+      redirect_with_error('Produto inválido');
+    }
+
+    // Regra: máximo 5 administrações por produto
+    $count = 0;
+    foreach ($_SESSION['visits'] as $v) {
+      if (($v['visit_type'] ?? '') === 'administration' && (int)($v['product_id'] ?? 0) === $product_id) {
+        $count++;
+      }
+    }
+    if ($count >= 5) {
+      redirect_with_error('Este produto já foi usado em 5 administrações. Escolhe outro frasco.');
+    }
+  }
+
   // Gerar visit_id
   $maxId = 0;
   foreach ($_SESSION['visits'] as $v) $maxId = max($maxId, (int)$v['visit_id']);
   $newId = $maxId + 1;
 
   // Guardar Visit (superclasse)
-  $_SESSION['visits'][] = [
+  $visitRow = [
     'visit_id' => $newId,
     'patient_id' => $patient_id,
     'doctor_id' => $doctor_id,
@@ -66,11 +98,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'datetime_end' => ($dt_end === '' ? null : $dt_end),
   ];
 
+  // adicionar product_id só em administration (modelo)
+  if ($visit_type === 'administration') {
+    $visitRow['product_id'] = $product_id;
+  }
+
+  $_SESSION['visits'][] = $visitRow;
+
   // Guardar subclasse (disjoint, complete)
   if ($visit_type === 'consultation') {
     $subspecialty = trim($_POST['subspecialty'] ?? '');
     if ($subspecialty === '') {
-      // rollback simples: remover o visit criado
       array_pop($_SESSION['visits']);
       redirect_with_error('Preenche a subspecialidade');
     }
@@ -118,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       'administration_site' => $administration_site,
       'dose_ml' => $dose_ml,
       'observation_minutes' => $observation_minutes,
+      'product_id' => $product_id, // guarda também na subclasse para facilitar
     ];
   }
 
@@ -137,6 +176,8 @@ include __DIR__ . '/../../includes/header.php';
 
   <?php if (empty($_SESSION['patients']) || empty($_SESSION['doctors'])): ?>
     <div class="msg msg-error">Não é possível criar visitas sem pacientes e médicos.</div>
+  <?php elseif (empty($_SESSION['products'])): ?>
+    <div class="msg msg-error">Não é possível criar administrações sem produtos. Cria um produto primeiro.</div>
   <?php else: ?>
     <form method="POST" action="/visit_create.php">
       <div class="field">
@@ -205,7 +246,7 @@ include __DIR__ . '/../../includes/header.php';
             <option value="maintenance">maintenance</option>
           </select>
         </div>
-        
+
         <div class="field">
           <label for="administration_site">Local de administração</label>
           <input id="administration_site" name="administration_site" placeholder="Ex: Braço esquerdo">
@@ -220,6 +261,18 @@ include __DIR__ . '/../../includes/header.php';
           <label for="observation_minutes">Minutos de observação</label>
           <input id="observation_minutes" name="observation_minutes" type="number" min="1" value="30">
         </div>
+
+        <div class="field">
+          <label for="product_id">Produto (frasco)</label>
+          <select id="product_id" name="product_id">
+            <?php foreach ($_SESSION['products'] as $p): ?>
+              <option value="<?= htmlspecialchars((string)$p['product_id']) ?>">
+                <?= htmlspecialchars($p['name']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <small>Nota: um produto pode ser usado no máximo em 5 administrações.</small>
+        </div>
       </div>
 
       <div style="display:flex; gap:10px; margin-top:12px;">
@@ -227,6 +280,7 @@ include __DIR__ . '/../../includes/header.php';
         <a class="btn" href="/visits.php">Cancelar</a>
       </div>
     </form>
+
     <script>
       const typeSelect = document.getElementById('visit_type');
       const secC = document.getElementById('section_consultation');
