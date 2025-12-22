@@ -39,7 +39,8 @@ $error   = $_GET['error'] ?? null;
     <a href="/diagnoses.php">Diagnósticos</a>
     <a href="/products.php">Produtos</a>
     <a href="/manufacturers.php">Fabricantes</a>
-    
+    <a href="/tests.php">Testes</a>
+
 
 
   </nav>

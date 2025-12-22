@@ -38,42 +38,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = $_POST['action'] ?? '';
 
   if ($action === 'add') {
-    $code = trim($_POST['who_iuis_code'] ?? '');
+  $code = trim($_POST['who_iuis_code'] ?? '');
+  $start_dose_ug = $_POST['start_dose_ug'] ?? '';
+  $target_dose_ug = $_POST['target_dose_ug'] ?? '';
 
-    if ($code === '') {
-      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Escolhe+um+alerg%C3%A9nio');
-      exit;
-    }
-
-    // confirmar se o alergénio existe
-    $allergenExists = false;
-    foreach ($_SESSION['allergens'] as $a) {
-      if ((string)$a['who_iuis_code'] === (string)$code) {
-        $allergenExists = true;
-        break;
-      }
-    }
-    if (!$allergenExists) {
-      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Alerg%C3%A9nio+inv%C3%A1lido');
-      exit;
-    }
-
-    // impedir duplicados (mesmo plano + mesmo alergénio)
-    foreach ($_SESSION['aitplan_allergens'] as $link) {
-      if ((int)$link['aitplan_id'] === $planId && (string)$link['who_iuis_code'] === (string)$code) {
-        header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Esse+alerg%C3%A9nio+j%C3%A1+est%C3%A1+associado+ao+plano');
-        exit;
-      }
-    }
-
-    $_SESSION['aitplan_allergens'][] = [
-      'aitplan_id' => $planId,
-      'who_iuis_code' => $code,
-    ];
-
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+associado+com+sucesso');
+  if ($code === '') {
+    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Escolhe+um+alerg%C3%A9nio');
     exit;
   }
+
+  if ($start_dose_ug === '' || $target_dose_ug === '') {
+    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Preenche+as+doses');
+    exit;
+  }
+
+  $start_dose_ug = (float)$start_dose_ug;
+  $target_dose_ug = (float)$target_dose_ug;
+
+  if ($start_dose_ug <= 0 || $target_dose_ug <= 0) {
+    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=As+doses+t%C3%AAm+de+ser+maiores+que+0');
+    exit;
+  }
+
+  if ($target_dose_ug < $start_dose_ug) {
+    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Target+dose+tem+de+ser+maior+ou+igual+%C3%A0+start+dose');
+    exit;
+  }
+
+  // confirmar se o alergénio existe
+  $allergenExists = false;
+  foreach ($_SESSION['allergens'] as $a) {
+    if ((string)$a['who_iuis_code'] === (string)$code) {
+      $allergenExists = true;
+      break;
+    }
+  }
+  if (!$allergenExists) {
+    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Alerg%C3%A9nio+inv%C3%A1lido');
+    exit;
+  }
+
+  // impedir duplicados (mesmo plano + mesmo alergénio)
+  foreach ($_SESSION['aitplan_allergens'] as $link) {
+    if ((int)$link['aitplan_id'] === $planId && (string)$link['who_iuis_code'] === (string)$code) {
+      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Esse+alerg%C3%A9nio+j%C3%A1+est%C3%A1+associado+ao+plano');
+      exit;
+    }
+  }
+
+  $_SESSION['aitplan_allergens'][] = [
+    'aitplan_id' => $planId,
+    'who_iuis_code' => $code,
+    'start_dose_ug' => $start_dose_ug,
+    'target_dose_ug' => $target_dose_ug,
+  ];
+
+  header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+associado+com+sucesso');
+  exit;
+}
+
 
   if ($action === 'remove') {
     $code = trim($_POST['who_iuis_code'] ?? '');
@@ -187,10 +210,35 @@ include __DIR__ . '/../../includes/header.php';
         </select>
       </div>
 
+      <div class="field">
+        <label for="start_dose_ug">Start dose (µg)</label>
+        <input
+          id="start_dose_ug"
+          name="start_dose_ug"
+          type="number"
+          min="0"
+          step="0.01"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="target_dose_ug">Target dose (µg)</label>
+        <input
+          id="target_dose_ug"
+          name="target_dose_ug"
+          type="number"
+          min="0"
+          step="0.01"
+          required
+        >
+      </div>
+
       <button class="btn btn-primary" type="submit">Associar</button>
     </form>
   <?php endif; ?>
 </section>
+
 
 <section class="card">
   <h2>Alergénios associados</h2>
@@ -201,13 +249,16 @@ include __DIR__ . '/../../includes/header.php';
     <table>
       <thead>
         <tr>
-          <th>Código</th>
-          <th>Nome comum</th>
-          <th>Espécie</th>
-          <th>Categoria</th>
-          <th>Ações</th>
+         <th>Código</th>
+         <th>Nome comum</th>
+         <th>Espécie</th>
+         <th>Categoria</th>
+         <th>Start dose (µg)</th>
+         <th>Target dose (µg)</th>
+         <th>Ações</th>
         </tr>
       </thead>
+      
       <tbody>
         <?php foreach ($linkedAllergens as $a): ?>
           <tr>
@@ -215,6 +266,8 @@ include __DIR__ . '/../../includes/header.php';
             <td><?= htmlspecialchars($a['common_name']) ?></td>
             <td><?= htmlspecialchars($a['species']) ?></td>
             <td><?= htmlspecialchars($a['category']) ?></td>
+            <td><?= htmlspecialchars((string)($link['start_dose_ug'] ?? '—')) ?></td>
+            <td><?= htmlspecialchars((string)($link['target_dose_ug'] ?? '—')) ?></td>
             <td>
               <form method="POST" action="/plan_allergens.php?plan_id=<?= urlencode((string)$planId) ?>" style="margin:0;">
                 <input type="hidden" name="action" value="remove">

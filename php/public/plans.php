@@ -23,8 +23,14 @@ foreach ($_SESSION['patients'] as $p) {
 
 $productMap = [];
 foreach ($_SESSION['products'] as $pr) {
-  $productMap[(int)$pr['product_id']] = (string)$pr['name'];
+  $pid = $pr['product_id'] ?? $pr['serial_number'] ?? '';
+  $label = '';
+  if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
+  if (isset($pr['brand'])) $label .= ($label ? ' — ' : '') . $pr['brand'];
+  if ($label === '') $label = (string)$pid;
+  $productMap[(string)$pid] = $label;
 }
+
 
 $plans = $_SESSION['aitplans'];
 
@@ -62,14 +68,17 @@ include __DIR__ . '/../../includes/header.php';
       <?php foreach ($plans as $pl): ?>
         <tr>
           <td><?= htmlspecialchars($patientMap[(int)$pl['patient_id']] ?? '—') ?></td>
-          <td><?= htmlspecialchars($productMap[(int)$pl['product_id']] ?? '—') ?></td>
-          <td><?= htmlspecialchars($pl['start_date']) ?></td>
-          <td><?= htmlspecialchars($pl['end_date'] ?: '—') ?></td>
-          <td><?= htmlspecialchars($pl['status']) ?></td>
+          <td><?= htmlspecialchars($productMap[(string)$pl['product_id']] ?? '—') ?></td>
+          <td><?= htmlspecialchars((string)($pl['start_date'] ?? '—')) ?></td>
+          <td><?= htmlspecialchars((string)($pl['end_date'] ?? '—')) ?></td>
+          <td><?= htmlspecialchars((string)($pl['route'] ?? '—')) ?></td>
+          <td><?= htmlspecialchars((string)($pl['build_up_protocol'] ?? '—')) ?></td>
+          <td><?= htmlspecialchars((string)($pl['maintenance_protocol'] ?? '—')) ?></td>
+          <td><?= htmlspecialchars((string)($pl['status'] ?? '—')) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
             <a class="btn" href="/plan_edit.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Editar</a>
             <a class="btn btn-danger" href="/plan_delete.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Apagar</a>
+            <a class="btn" href="/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
           </td>
         </tr>
       <?php endforeach; ?>
