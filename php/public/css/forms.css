@@ -1,34 +1,129 @@
-.form {
-  display: grid;
-  gap: var(--s-3);
-}
+.form{display:grid; gap: var(--s-3);}
 
-.form-row {
-  display: grid;
+.form-row{
+  display:grid;
   grid-template-columns: 1fr 2fr;
   gap: var(--s-2);
+  align-items:center;
 }
 
-label {
-  font-size: 1rem;
+label{
+  font-size: .95rem;
   color: var(--muted);
 }
 
-input, select, textarea {
-  width: 100%;
-  padding: 12px;
-  border-radius: 5px;
-  border: 1px solid #2a3140;
-  background: #1b2230;
+input, select, textarea{
+  width:100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
   color: var(--text);
+  outline: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-input:focus, select:focus, textarea:focus {
-  border-color: var(--primary);
+input:focus, select:focus, textarea:focus{
+  border-color: rgba(45,212,191,.55);
+  box-shadow: 0 0 0 4px rgba(45,212,191,.14);
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
+textarea{ min-height: 96px; resize: vertical; }
+
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
   gap: var(--s-2);
+}
+
+/* Botões - funciona mesmo sem classes (ex: input submit do login) */
+button,
+input[type="submit"],
+input[type="button"],
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 11px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #06101f;
+
+  font-weight: 800;
+  letter-spacing: .2px;
+  cursor: pointer;
+
+  box-shadow: 0 12px 26px rgba(79,140,255,.18);
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+a.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 16px 34px rgba(79,140,255,.22);
+}
+
+button:active,
+input[type="submit"]:active,
+input[type="button"]:active,
+a.btn:active {
+  transform: translateY(0);
+}
+
+/* Botões “secundários” e “perigo” caso uses classes */
+.btn-secondary{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.btn-danger{
+  background: rgba(251,113,133,.14);
+  color: var(--text);
+  border: 1px solid rgba(251,113,133,.22);
+  box-shadow: none;
+}
+
+/* Botão do login não ficar colado e ter largura coerente */
+input[type="submit"]{
+  margin-top: 10px;
+  min-width: 140px;
+}
+
+/* Formulários: largura mais agradável (especialmente Login) */
+.form{
+  max-width: 720px;
+}
+
+
+/* Espaço consistente entre campos e o botão */
+form{
+  display: grid;
+  gap: 12px;
+}
+
+/* Se os inputs estiverem dentro de labels ou parágrafos, garante margem */
+label{
+  display: block;
+  margin-top: 6px;
+}
+
+/* Botão com mais “respiração” */
+button,
+input[type="submit"],
+input[type="button"]{
+  margin-top: 10px;
+}
+
+input[type="submit"],
+button[type="submit"]{
+  justify-self: start;   /* usa "end" se quiseres à direita */
 }
