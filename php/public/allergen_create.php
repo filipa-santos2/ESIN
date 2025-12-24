@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -14,14 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $category      = trim($_POST['category'] ?? '');
 
   if ($who_iuis_code === '' || $species === '' || $common_name === '' || $category === '') {
-    header('Location: /allergen_create.php?error=Preenche+todos+os+campos');
+    header('Location: ' . $BASE_URL . '/allergen_create.php?error=Preenche+todos+os+campos');
     exit;
   }
 
   // UNIQUE(who_iuis_code)
   foreach ($_SESSION['allergens'] as $a) {
     if ((string)$a['who_iuis_code'] === (string)$who_iuis_code) {
-      header('Location: /allergen_create.php?error=J%C3%A1+existe+um+alerg%C3%A9nio+com+esse+c%C3%B3digo');
+      header('Location: ' . $BASE_URL . '/allergen_create.php?error=J%C3%A1+existe+um+alerg%C3%A9nio+com+esse+c%C3%B3digo');
       exit;
     }
   }
@@ -33,11 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'category' => $category,
   ];
 
-  header('Location: /allergens.php?success=Alerg%C3%A9nio+adicionado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/allergens.php?success=Alerg%C3%A9nio+adicionado+com+sucesso');
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -47,7 +49,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/allergen_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/allergen_create.php">
     <div class="field">
       <label for="who_iuis_code">Código WHO/IUIS</label>
       <input id="who_iuis_code" name="who_iuis_code" placeholder="Ex: t1" required>
@@ -70,9 +72,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/allergens.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/allergens.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

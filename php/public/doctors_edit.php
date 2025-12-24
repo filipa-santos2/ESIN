@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: /doctors.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/doctors.php?error=ID+inv%C3%A1lido');
   exit;
 }
 
@@ -23,7 +24,7 @@ for ($i = 0; $i < count($_SESSION['doctors']); $i++) {
 }
 
 if ($index === null) {
-  header('Location: /doctors.php?error=M%C3%A9dico+n%C3%A3o+encontrado');
+  header('Location: ' . $BASE_URL . '/doctors.php?error=M%C3%A9dico+n%C3%A3o+encontrado');
   exit;
 }
 
@@ -36,14 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email      = trim($_POST['email'] ?? '');
 
   if ($full_name === '' || $license_no === '' || $specialty === '') {
-    header('Location: /doctors_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome,+n%C3%BAmero+de+ordem+e+especialidade');
+    header('Location: ' . $BASE_URL . '/doctors_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome,+n%C3%BAmero+de+ordem+e+especialidade');
     exit;
   }
 
   // validar UNIQUE(license_no) (ignorando o próprio)
   foreach ($_SESSION['doctors'] as $d) {
     if ((int)$d['doctor_id'] !== $id && (string)$d['license_no'] === (string)$license_no) {
-      header('Location: /doctors_edit.php?id=' . urlencode((string)$id) . '&error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem');
+      header('Location: ' . $BASE_URL . '/doctors_edit.php?id=' . urlencode((string)$id) . '&error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem');
       exit;
     }
   }
@@ -55,14 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['doctors'][$index]['phone']      = $phone;
   $_SESSION['doctors'][$index]['email']      = $email;
 
-  header('Location: /doctors.php?success=M%C3%A9dico+atualizado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/doctors.php?success=M%C3%A9dico+atualizado+com+sucesso');
   exit;
 }
 
 // GET: mostrar form com valores atuais
 $doctor = $_SESSION['doctors'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -73,7 +75,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/doctors_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="full_name">Nome completo</label>
       <input id="full_name" name="full_name" value="<?= htmlspecialchars($doctor['full_name']) ?>" required>
@@ -101,9 +103,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/doctors.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/doctors.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

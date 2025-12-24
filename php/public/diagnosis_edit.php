@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['diagnoses'])) $_SESSION['diagnoses'] = [];
@@ -6,16 +7,16 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['diseases'])) $_SESSION['diseases'] = [];
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header('Location: /diagnoses.php?error=' . urlencode('ID inválido')); exit; }
+if ($id <= 0) { header('Location: ' . $BASE_URL . '/diagnoses.php?error=' . urlencode('ID inválido')); exit; }
 
 $index = null;
 for ($i = 0; $i < count($_SESSION['diagnoses']); $i++) {
   if ((int)$_SESSION['diagnoses'][$i]['diagnosis_id'] === $id) { $index = $i; break; }
 }
-if ($index === null) { header('Location: /diagnoses.php?error=' . urlencode('Diagnóstico não encontrado')); exit; }
+if ($index === null) { header('Location: ' . $BASE_URL . '/diagnoses.php?error=' . urlencode('Diagnóstico não encontrado')); exit; }
 
 function go_edit_error(int $id, string $msg): void {
-  header('Location: /diagnosis_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/diagnosis_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
@@ -46,13 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['diagnoses'][$index]['resolution_date'] = ($resolution_date === '' ? null : $resolution_date);
   $_SESSION['diagnoses'][$index]['notes'] = $notes;
 
-  header('Location: /diagnoses.php?success=' . urlencode('Diagnóstico atualizado com sucesso'));
+  header('Location: ' . $BASE_URL . '/diagnoses.php?success=' . urlencode('Diagnóstico atualizado com sucesso'));
   exit;
 }
 
 $dg = $_SESSION['diagnoses'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -62,7 +64,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/diagnosis_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/diagnosis_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -113,9 +115,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/diagnoses.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/diagnoses.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

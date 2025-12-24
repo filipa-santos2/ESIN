@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['tests'])) $_SESSION['tests'] = [];
@@ -19,7 +20,8 @@ foreach ($_SESSION['allergens'] as $a) {
 
 $tests = $_SESSION['tests'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -27,7 +29,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
     <p style="margin:0;">Registo de AllergenTesting (Paciente ↔ Alergénio).</p>
-    <a class="btn btn-primary" href="/test_create.php">Adicionar teste</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/test_create.php">Adicionar teste</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>
@@ -66,8 +68,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars((string)$t['test_type']) ?></td>
           <td><?= htmlspecialchars((string)$t['test_result']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/test_edit.php?id=<?= urlencode((string)$t['test_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/test_delete.php?id=<?= urlencode((string)$t['test_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/test_edit.php?id=<?= urlencode((string)$t['test_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/test_delete.php?id=<?= urlencode((string)$t['test_id']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -75,4 +77,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

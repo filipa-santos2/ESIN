@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -12,7 +13,8 @@ if (!isset($_SESSION['diseases'])) {
 
 $diseases = $_SESSION['diseases'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -20,7 +22,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Catálogo de doenças (dados em sessão nesta fase).</p>
-    <a class="btn btn-primary" href="/disease_create.php">Adicionar doença</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/disease_create.php">Adicionar doença</a>
   </div>
 </section>
 
@@ -39,8 +41,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($d['icd11_code']) ?></td>
           <td><?= htmlspecialchars($d['name']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/disease_edit.php?code=<?= urlencode($d['icd11_code']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/disease_delete.php?code=<?= urlencode($d['icd11_code']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($d['icd11_code']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/disease_delete.php?code=<?= urlencode($d['icd11_code']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -48,4 +50,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['tests'])) $_SESSION['tests'] = [];
@@ -6,16 +7,16 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['allergens'])) $_SESSION['allergens'] = [];
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header('Location: /tests.php?error=' . urlencode('ID inválido')); exit; }
+if ($id <= 0) { header('Location: ' . $BASE_URL . '/tests.php?error=' . urlencode('ID inválido')); exit; }
 
 $index = null;
 for ($i = 0; $i < count($_SESSION['tests']); $i++) {
   if ((int)$_SESSION['tests'][$i]['test_id'] === $id) { $index = $i; break; }
 }
-if ($index === null) { header('Location: /tests.php?error=' . urlencode('Teste não encontrado')); exit; }
+if ($index === null) { header('Location: ' . $BASE_URL . '/tests.php?error=' . urlencode('Teste não encontrado')); exit; }
 
 function go_edit_error(int $id, string $msg): void {
-  header('Location: /test_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/test_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
@@ -41,13 +42,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['tests'][$index]['test_type'] = $test_type;
   $_SESSION['tests'][$index]['test_result'] = $test_result;
 
-  header('Location: /tests.php?success=' . urlencode('Teste atualizado com sucesso'));
+  header('Location: ' . $BASE_URL . '/tests.php?success=' . urlencode('Teste atualizado com sucesso'));
   exit;
 }
 
 $t = $_SESSION['tests'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -57,7 +59,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/test_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/test_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -103,9 +105,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/tests.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/tests.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

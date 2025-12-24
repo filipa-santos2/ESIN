@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $planId = (int)($_GET['plan_id'] ?? 0);
 if ($planId <= 0) {
-  header('Location: /plans.php?error=Plano+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/plans.php?error=Plano+inv%C3%A1lido');
   exit;
 }
 
@@ -27,7 +28,7 @@ foreach ($_SESSION['aitplans'] as $pl) {
 }
 
 if (!$planExists) {
-  header('Location: /plans.php?error=Plano+n%C3%A3o+encontrado');
+  header('Location: ' . $BASE_URL . '/plans.php?error=Plano+n%C3%A3o+encontrado');
   exit;
 }
 
@@ -43,12 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $target_dose_ug = $_POST['target_dose_ug'] ?? '';
 
   if ($code === '') {
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Escolhe+um+alerg%C3%A9nio');
+    header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Escolhe+um+alerg%C3%A9nio');
     exit;
   }
 
   if ($start_dose_ug === '' || $target_dose_ug === '') {
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Preenche+as+doses');
+    header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Preenche+as+doses');
     exit;
   }
 
@@ -56,12 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $target_dose_ug = (float)$target_dose_ug;
 
   if ($start_dose_ug <= 0 || $target_dose_ug <= 0) {
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=As+doses+t%C3%AAm+de+ser+maiores+que+0');
+    header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=As+doses+t%C3%AAm+de+ser+maiores+que+0');
     exit;
   }
 
   if ($target_dose_ug < $start_dose_ug) {
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Target+dose+tem+de+ser+maior+ou+igual+%C3%A0+start+dose');
+    header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Target+dose+tem+de+ser+maior+ou+igual+%C3%A0+start+dose');
     exit;
   }
 
@@ -74,14 +75,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
   if (!$allergenExists) {
-    header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Alerg%C3%A9nio+inv%C3%A1lido');
+    header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Alerg%C3%A9nio+inv%C3%A1lido');
     exit;
   }
 
   // impedir duplicados (mesmo plano + mesmo alergénio)
   foreach ($_SESSION['aitplan_allergens'] as $link) {
     if ((int)$link['aitplan_id'] === $planId && (string)$link['who_iuis_code'] === (string)$code) {
-      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Esse+alerg%C3%A9nio+j%C3%A1+est%C3%A1+associado+ao+plano');
+      header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=Esse+alerg%C3%A9nio+j%C3%A1+est%C3%A1+associado+ao+plano');
       exit;
     }
   }
@@ -93,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'target_dose_ug' => $target_dose_ug,
   ];
 
-  header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+associado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+associado+com+sucesso');
   exit;
 }
 
@@ -115,14 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['aitplan_allergens'] = $newLinks;
 
     if ($removed) {
-      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+removido+com+sucesso');
+      header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&success=Alerg%C3%A9nio+removido+com+sucesso');
     } else {
-      header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=N%C3%A3o+foi+poss%C3%ADvel+remover+(associa%C3%A7%C3%A3o+n%C3%A3o+encontrada)');
+      header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=N%C3%A3o+foi+poss%C3%ADvel+remover+(associa%C3%A7%C3%A3o+n%C3%A3o+encontrada)');
     }
     exit;
   }
 
-  header('Location: /plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=A%C3%A7%C3%A3o+inv%C3%A1lida');
+  header('Location: ' . $BASE_URL . '/plan_allergens.php?plan_id=' . urlencode((string)$planId) . '&error=A%C3%A7%C3%A3o+inv%C3%A1lida');
   exit;
 }
 
@@ -166,7 +167,8 @@ foreach ($_SESSION['allergens'] as $a) {
   }
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -174,7 +176,7 @@ include __DIR__ . '/../../includes/header.php';
   <p><small>Plano ID: <?= htmlspecialchars((string)$planId) ?></small></p>
 
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <a class="btn" href="/plans.php">Voltar aos planos</a>
+    <a class="btn" href="<?= $BASE_URL ?>/plans.php">Voltar aos planos</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>
@@ -191,12 +193,12 @@ include __DIR__ . '/../../includes/header.php';
 
   <?php if (empty($_SESSION['allergens'])): ?>
     <div class="msg msg-error">
-      Ainda não existem alergénios. Vai a <a href="/allergens.php">Alergénios</a> e cria pelo menos um.
+      Ainda não existem alergénios. Vai a <a href="<?= $BASE_URL ?>/allergens.php">Alergénios</a> e cria pelo menos um.
     </div>
   <?php elseif (empty($availableAllergens)): ?>
     <p>Já tens todos os alergénios disponíveis associados a este plano.</p>
   <?php else: ?>
-    <form method="POST" action="/plan_allergens.php?plan_id=<?= urlencode((string)$planId) ?>">
+    <form method="POST" action="<?= $BASE_URL ?>/plan_allergens.php?plan_id=<?= urlencode((string)$planId) ?>">
       <input type="hidden" name="action" value="add">
 
       <div class="field">
@@ -269,7 +271,7 @@ include __DIR__ . '/../../includes/header.php';
             <td><?= htmlspecialchars((string)($link['start_dose_ug'] ?? '—')) ?></td>
             <td><?= htmlspecialchars((string)($link['target_dose_ug'] ?? '—')) ?></td>
             <td>
-              <form method="POST" action="/plan_allergens.php?plan_id=<?= urlencode((string)$planId) ?>" style="margin:0;">
+              <form method="POST" action="<?= $BASE_URL ?>/plan_allergens.php?plan_id=<?= urlencode((string)$planId) ?>" style="margin:0;">
                 <input type="hidden" name="action" value="remove">
                 <input type="hidden" name="who_iuis_code" value="<?= htmlspecialchars($a['who_iuis_code']) ?>">
                 <button class="btn btn-danger" type="submit">Remover</button>
@@ -282,4 +284,4 @@ include __DIR__ . '/../../includes/header.php';
   <?php endif; ?>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

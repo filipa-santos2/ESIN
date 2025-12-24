@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -8,7 +9,7 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
 
 function go_error(string $msg): void {
-  header('Location: /plan_create.php?error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/plan_create.php?error=' . urlencode($msg));
   exit;
 }
 
@@ -81,11 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ];
 
 
-  header('Location: /plans.php?success=' . urlencode('Plano criado com sucesso'));
+  header('Location: ' . $BASE_URL . '/plans.php?success=' . urlencode('Plano criado com sucesso'));
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -95,7 +97,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/plan_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/plan_create.php">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -111,7 +113,8 @@ include __DIR__ . '/../../includes/header.php';
       <label for="product_id">Produto</label>
       <select id="product_id" name="product_id" required>
         <?php foreach ($_SESSION['products'] as $pr): ?>
-          <?php
+<?php
+require_once __DIR__ . '/../../includes/config.php';
             $id = $pr['product_id'] ?? $pr['serial_number'] ?? '';
             $label = '';
             if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
@@ -182,9 +185,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/plans.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/plans.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: /products.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/products.php?error=ID+inv%C3%A1lido');
   exit;
 }
 
@@ -22,19 +23,20 @@ for ($i = 0; $i < count($_SESSION['products']); $i++) {
 }
 
 if ($index === null) {
-  header('Location: /products.php?error=Produto+n%C3%A3o+encontrado');
+  header('Location: ' . $BASE_URL . '/products.php?error=Produto+n%C3%A3o+encontrado');
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   array_splice($_SESSION['products'], $index, 1);
-  header('Location: /products.php?success=Produto+apagado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/products.php?success=Produto+apagado+com+sucesso');
   exit;
 }
 
 $product = $_SESSION['products'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -45,12 +47,12 @@ include __DIR__ . '/../../includes/header.php';
     <strong><?= htmlspecialchars($product['name']) ?></strong>?
   </p>
 
-  <form method="POST" action="/product_delete.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$id) ?>">
     <div style="display:flex; gap:10px;">
       <button class="btn btn-danger" type="submit">Confirmar</button>
-      <a class="btn" href="/products.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/products.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

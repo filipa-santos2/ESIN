@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -19,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $notes = trim($_POST['notes'] ?? '');
 
   if ($manufacturer_id <= 0 || $name === '' || $type === '' || $concentration === '' || $unit === '') {
-    header('Location: /product_create.php?error=Preenche+todos+os+campos+obrigat%C3%B3rios');
+    header('Location: ' . $BASE_URL . '/product_create.php?error=Preenche+todos+os+campos+obrigat%C3%B3rios');
     exit;
   }
 
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
   if (!$manufacturerExists) {
-    header('Location: /product_create.php?error=Fabricante+inv%C3%A1lido');
+    header('Location: ' . $BASE_URL . '/product_create.php?error=Fabricante+inv%C3%A1lido');
     exit;
   }
 
@@ -53,11 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'notes' => $notes,
   ];
 
-  header('Location: /products.php?success=Produto+adicionado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/products.php?success=Produto+adicionado+com+sucesso');
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -70,10 +72,10 @@ include __DIR__ . '/../../includes/header.php';
   <?php if (empty($_SESSION['manufacturers'])): ?>
     <div class="msg msg-error">
       Não podes criar produtos sem fabricantes.
-      Vai a <a href="/manufacturers.php">Fabricantes</a> e cria pelo menos um.
+      Vai a <a href="<?= $BASE_URL ?>/manufacturers.php">Fabricantes</a> e cria pelo menos um.
     </div>
   <?php else: ?>
-    <form method="POST" action="/product_create.php">
+    <form method="POST" action="<?= $BASE_URL ?>/product_create.php">
       <div class="field">
         <label for="manufacturer_id">Fabricante</label>
         <select id="manufacturer_id" name="manufacturer_id" required>
@@ -112,10 +114,10 @@ include __DIR__ . '/../../includes/header.php';
 
       <div style="display:flex; gap:10px;">
         <button class="btn btn-primary" type="submit">Guardar</button>
-        <a class="btn" href="/products.php">Cancelar</a>
+        <a class="btn" href="<?= $BASE_URL ?>/products.php">Cancelar</a>
       </div>
     </form>
   <?php endif; ?>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
@@ -7,7 +8,7 @@ if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header('Location: /visits.php?error=' . urlencode('ID inválido')); exit; }
+if ($id <= 0) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('ID inválido')); exit; }
 
 // encontrar visit + tipo (para mensagem e consistência)
 $visitIndex = null;
@@ -21,7 +22,7 @@ for ($i = 0; $i < count($_SESSION['visits']); $i++) {
   }
 }
 
-if ($visitIndex === null) { header('Location: /visits.php?error=' . urlencode('Visita não encontrada')); exit; }
+if ($visitIndex === null) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada')); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // 1) remover da superclasse visits
@@ -48,23 +49,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ));
   }
 
-  header('Location: /visits.php?success=' . urlencode('Visita apagada com sucesso'));
+  header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita apagada com sucesso'));
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Apagar visita</h1>
   <p>Tens a certeza que queres apagar esta visita?</p>
 
-  <form method="POST" action="/visit_delete.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/visit_delete.php?id=<?= urlencode((string)$id) ?>">
     <div style="display:flex; gap:10px;">
       <button class="btn btn-danger" type="submit">Confirmar</button>
-      <a class="btn" href="/visits.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/visits.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: /patients.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/patients.php?error=ID+inv%C3%A1lido');
   exit;
 }
 
@@ -22,7 +23,7 @@ for ($i = 0; $i < count($_SESSION['patients']); $i++) {
 }
 
 if ($index === null) {
-  header('Location: /patients.php?error=Paciente+n%C3%A3o+encontrado');
+  header('Location: ' . $BASE_URL . '/patients.php?error=Paciente+n%C3%A3o+encontrado');
   exit;
 }
 
@@ -34,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $validSex = ['M', 'F', 'X'];
   if ($full_name === '' || $birth_date === '' || !in_array($sex, $validSex, true)) {
-    header('Location: /patient_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome,+data+de+nascimento+e+sexo+v%C3%A1lido');
+    header('Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome,+data+de+nascimento+e+sexo+v%C3%A1lido');
     exit;
   }
 
@@ -43,13 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['patients'][$index]['sex']        = $sex;
   $_SESSION['patients'][$index]['phone']      = $phone;
 
-  header('Location: /patients.php?success=Paciente+atualizado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/patients.php?success=Paciente+atualizado+com+sucesso');
   exit;
 }
 
 $patient = $_SESSION['patients'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -60,7 +62,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/patient_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/patient_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="full_name">Nome completo</label>
       <input id="full_name" name="full_name" value="<?= htmlspecialchars($patient['full_name']) ?>" required>
@@ -87,9 +89,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/patients.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/patients.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

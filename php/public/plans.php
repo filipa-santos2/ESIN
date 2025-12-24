@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -34,7 +35,8 @@ foreach ($_SESSION['products'] as $pr) {
 
 $plans = $_SESSION['aitplans'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -42,7 +44,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Planos AIT registados.</p>
-    <a class="btn btn-primary" href="/plan_create.php">Criar plano</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/plan_create.php">Criar plano</a>
   </div>
 
   <?php if (empty($_SESSION['patients']) || empty($_SESSION['products'])): ?>
@@ -76,9 +78,9 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars((string)($pl['maintenance_protocol'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['status'] ?? '—')) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/plan_edit.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/plan_delete.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Apagar</a>
-            <a class="btn" href="/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
+            <a class="btn" href="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/plan_delete.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -86,4 +88,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

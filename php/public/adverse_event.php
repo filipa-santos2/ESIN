@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
+
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
@@ -6,16 +8,16 @@ if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
 
 $visitId = (int)($_GET['visit_id'] ?? 0);
-if ($visitId <= 0) { header('Location: /visits.php?error=' . urlencode('Visit inválida')); exit; }
+if ($visitId <= 0) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visit inválida')); exit; }
 
 // confirmar que existe e que é administration
 $visit = null;
 foreach ($_SESSION['visits'] as $v) {
   if ((int)$v['visit_id'] === $visitId) { $visit = $v; break; }
 }
-if (!$visit) { header('Location: /visits.php?error=' . urlencode('Visita não encontrada')); exit; }
+if (!$visit) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada')); exit; }
 if ((string)$visit['visit_type'] !== 'administration') {
-  header('Location: /visits.php?error=' . urlencode('Evento adverso só existe para Administration'));
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Evento adverso só existe para Administration'));
   exit;
 }
 
@@ -25,7 +27,7 @@ foreach ($_SESSION['administrations'] as $a) {
   if ((int)$a['visit_id'] === $visitId) { $adminExists = true; break; }
 }
 if (!$adminExists) {
-  header('Location: /visits.php?error=' . urlencode('Administration não encontrada para esta visita'));
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Administration não encontrada para esta visita'));
   exit;
 }
 
@@ -37,7 +39,7 @@ for ($i = 0; $i < count($_SESSION['adverse_events']); $i++) {
 
 function redirect_ae(int $visitId, string $msg, bool $success=false): void {
   $key = $success ? 'success' : 'error';
-  header('Location: /adverse_event.php?visit_id=' . urlencode((string)$visitId) . '&' . $key . '=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/adverse_event.php?visit_id=' . urlencode((string)$visitId) . '&' . $key . '=' . urlencode($msg));
   exit;
 }
 
@@ -79,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $ae = ($aeIndex !== null) ? $_SESSION['adverse_events'][$aeIndex] : ['type'=>'', 'onset_minutes'=>'', 'outcome'=>''];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -87,8 +90,8 @@ include __DIR__ . '/../../includes/header.php';
   <p><small>Visit ID (Administration): <?= htmlspecialchars((string)$visitId) ?></small></p>
 
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <a class="btn" href="/visits.php">Voltar às visitas</a>
-    <a class="btn" href="/visit_edit.php?id=<?= urlencode((string)$visitId) ?>">Voltar à visita</a>
+    <a class="btn" href="<?= $BASE_URL ?>/visits.php">Voltar às visitas</a>
+    <a class="btn" href="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$visitId) ?>">Voltar à visita</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>
@@ -103,7 +106,7 @@ include __DIR__ . '/../../includes/header.php';
 <section class="card">
   <h2><?= ($aeIndex === null) ? 'Criar' : 'Editar' ?> evento adverso</h2>
 
-  <form method="POST" action="/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>">
     <input type="hidden" name="action" value="save">
 
     <div class="field">
@@ -125,7 +128,7 @@ include __DIR__ . '/../../includes/header.php';
       <button class="btn btn-primary" type="submit">Guardar</button>
 
       <?php if ($aeIndex !== null): ?>
-        <form method="POST" action="/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>" style="margin:0;">
+        <form method="POST" action="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>" style="margin:0;">
           <input type="hidden" name="action" value="delete">
           <button class="btn btn-danger" type="submit">Remover evento</button>
         </form>
@@ -134,4 +137,4 @@ include __DIR__ . '/../../includes/header.php';
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

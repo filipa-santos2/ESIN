@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
@@ -10,19 +11,19 @@ if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header('Location: /visits.php?error=' . urlencode('ID inválido')); exit; }
+if ($id <= 0) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('ID inválido')); exit; }
 
 $visitIndex = null;
 for ($i = 0; $i < count($_SESSION['visits']); $i++) {
   if ((int)$_SESSION['visits'][$i]['visit_id'] === $id) { $visitIndex = $i; break; }
 }
-if ($visitIndex === null) { header('Location: /visits.php?error=' . urlencode('Visita não encontrada')); exit; }
+if ($visitIndex === null) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada')); exit; }
 
 $visit = $_SESSION['visits'][$visitIndex];
 $type = (string)$visit['visit_type'];
 
 function redirect_edit_error(int $id, string $msg): void {
-  header('Location: /visit_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/visit_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
@@ -134,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
-  header('Location: /visits.php?success=' . urlencode('Visita atualizada com sucesso'));
+  header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita atualizada com sucesso'));
   exit;
 }
 
@@ -155,7 +156,8 @@ $admin = ($adminIdx !== null) ? $_SESSION['administrations'][$adminIdx] : [
   'observation_minutes' => 30
 ];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -166,7 +168,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/visit_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -270,16 +272,16 @@ include __DIR__ . '/../../includes/header.php';
         </div>
 
         <div style="margin-top:8px;">
-          <a class="btn" href="/adverse_event.php?visit_id=<?= urlencode((string)$id) ?>">Gerir evento adverso</a>
+          <a class="btn" href="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$id) ?>">Gerir evento adverso</a>
         </div>
       </div>
     <?php endif; ?>
 
     <div style="display:flex; gap:10px; margin-top:12px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/visits.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/visits.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

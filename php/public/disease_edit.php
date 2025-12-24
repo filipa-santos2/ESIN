@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $code = strtoupper(trim($_GET['code'] ?? ''));
 if ($code === '') {
-  header('Location: /diseases.php?error=C%C3%B3digo+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/diseases.php?error=C%C3%B3digo+inv%C3%A1lido');
   exit;
 }
 
@@ -23,7 +24,7 @@ for ($i = 0; $i < count($_SESSION['diseases']); $i++) {
 }
 
 if ($index === null) {
-  header('Location: /diseases.php?error=Doen%C3%A7a+n%C3%A3o+encontrada');
+  header('Location: ' . $BASE_URL . '/diseases.php?error=Doen%C3%A7a+n%C3%A3o+encontrada');
   exit;
 }
 
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $name = trim($_POST['name'] ?? '');
 
   if ($name === '') {
-    header('Location: /disease_edit.php?code=' . urlencode($code) . '&error=Preenche+o+nome');
+    header('Location: ' . $BASE_URL . '/disease_edit.php?code=' . urlencode($code) . '&error=Preenche+o+nome');
     exit;
   }
 
@@ -40,20 +41,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   foreach ($_SESSION['diseases'] as $d) {
     if ((string)$d['icd11_code'] !== (string)$code &&
         strtolower((string)$d['name']) === strtolower((string)$name)) {
-      header('Location: /disease_edit.php?code=' . urlencode($code) . '&error=J%C3%A1+existe+uma+doen%C3%A7a+com+esse+nome');
+      header('Location: ' . $BASE_URL . '/disease_edit.php?code=' . urlencode($code) . '&error=J%C3%A1+existe+uma+doen%C3%A7a+com+esse+nome');
       exit;
     }
   }
 
   $_SESSION['diseases'][$index]['name'] = $name;
 
-  header('Location: /diseases.php?success=Doen%C3%A7a+atualizada+com+sucesso');
+  header('Location: ' . $BASE_URL . '/diseases.php?success=Doen%C3%A7a+atualizada+com+sucesso');
   exit;
 }
 
 $disease = $_SESSION['diseases'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -64,7 +66,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/disease_edit.php?code=<?= urlencode($code) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($code) ?>">
     <div class="field">
       <label for="icd11_code">Código ICD-11</label>
       <input id="icd11_code" value="<?= htmlspecialchars($disease['icd11_code']) ?>" disabled>
@@ -78,9 +80,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/diseases.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/diseases.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

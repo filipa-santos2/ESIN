@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -14,14 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email   = trim($_POST['email'] ?? '');
 
   if ($name === '' || $country === '') {
-    header('Location: /manufacturer_create.php?error=Preenche+nome+e+pa%C3%ADs');
+    header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=Preenche+nome+e+pa%C3%ADs');
     exit;
   }
 
   // UNIQUE(name) (faz sentido para catálogo)
   foreach ($_SESSION['manufacturers'] as $m) {
     if (strtolower((string)$m['name']) === strtolower((string)$name)) {
-      header('Location: /manufacturer_create.php?error=J%C3%A1+existe+um+fabricante+com+esse+nome');
+      header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=J%C3%A1+existe+um+fabricante+com+esse+nome');
       exit;
     }
   }
@@ -41,11 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'email' => $email,
   ];
 
-  header('Location: /manufacturers.php?success=Fabricante+adicionado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/manufacturers.php?success=Fabricante+adicionado+com+sucesso');
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -55,7 +57,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/manufacturer_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/manufacturer_create.php">
     <div class="field">
       <label for="name">Nome</label>
       <input id="name" name="name" required>
@@ -78,9 +80,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/manufacturers.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/manufacturers.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

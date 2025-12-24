@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
@@ -43,7 +44,8 @@ foreach ($_SESSION['adverse_events'] as $ae) {
 
 $visits = $_SESSION['visits'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -51,7 +53,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
     <p style="margin:0;">Visitas (Visit) com especializações (Consultation / Administration).</p>
-    <a class="btn btn-primary" href="/visit_create.php">Adicionar visita</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/visit_create.php">Adicionar visita</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>
@@ -85,7 +87,8 @@ include __DIR__ . '/../../includes/header.php';
     </thead>
     <tbody>
       <?php foreach ($visits as $v): ?>
-        <?php
+<?php
+require_once __DIR__ . '/../../includes/config.php';
           $vid = (int)$v['visit_id'];
           $type = (string)$v['visit_type'];
           $details = '—';
@@ -124,10 +127,10 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($details) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
             <?php if ($type === 'administration'): ?>
-              <a class="btn" href="/adverse_event.php?visit_id=<?= urlencode((string)$vid) ?>">Evento adverso</a>
+              <a class="btn" href="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$vid) ?>">Evento adverso</a>
             <?php endif; ?>
-            <a class="btn" href="/visit_edit.php?id=<?= urlencode((string)$vid) ?>">Editar</a>
-            <a class="btn btn-danger" href="/visit_delete.php?id=<?= urlencode((string)$vid) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$vid) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/visit_delete.php?id=<?= urlencode((string)$vid) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -135,4 +138,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

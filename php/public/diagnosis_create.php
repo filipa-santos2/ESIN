@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['diagnoses'])) $_SESSION['diagnoses'] = [];
@@ -6,7 +7,7 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['diseases'])) $_SESSION['diseases'] = [];
 
 function go_error(string $msg): void {
-  header('Location: /diagnosis_create.php?error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/diagnosis_create.php?error=' . urlencode($msg));
   exit;
 }
 
@@ -57,11 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'notes' => $notes,
   ];
 
-  header('Location: /diagnoses.php?success=' . urlencode('Diagnóstico criado com sucesso'));
+  header('Location: ' . $BASE_URL . '/diagnoses.php?success=' . urlencode('Diagnóstico criado com sucesso'));
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -71,7 +73,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/diagnosis_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/diagnosis_create.php">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -118,9 +120,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/diagnoses.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/diagnoses.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

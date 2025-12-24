@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: /plans.php?error=' . urlencode('ID inválido'));
+  header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
@@ -18,12 +19,12 @@ for ($i = 0; $i < count($_SESSION['aitplans']); $i++) {
   if ((int)$_SESSION['aitplans'][$i]['aitplan_id'] === $id) { $index = $i; break; }
 }
 if ($index === null) {
-  header('Location: /plans.php?error=' . urlencode('Plano não encontrado'));
+  header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('Plano não encontrado'));
   exit;
 }
 
 function go_edit_error(int $id, string $msg): void {
-  header('Location: /plan_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/plan_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
@@ -68,13 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['aitplans'][$index]['status'] = $status;
   $_SESSION['aitplans'][$index]['notes'] = $notes;
 
-  header('Location: /plans.php?success=' . urlencode('Plano atualizado com sucesso'));
+  header('Location: ' . $BASE_URL . '/plans.php?success=' . urlencode('Plano atualizado com sucesso'));
   exit;
 }
 
 $pl = $_SESSION['aitplans'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -84,7 +86,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/plan_edit.php?id=<?= urlencode((string)$id) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
       <select id="patient_id" name="patient_id" required>
@@ -101,7 +103,8 @@ include __DIR__ . '/../../includes/header.php';
       <label for="product_id">Produto</label>
       <select id="product_id" name="product_id" required>
         <?php foreach ($_SESSION['products'] as $pr): ?>
-          <?php
+<?php
+require_once __DIR__ . '/../../includes/config.php';
             $pid = $pr['product_id'] ?? $pr['serial_number'] ?? '';
             $label = '';
             if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
@@ -171,9 +174,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
-      <a class="btn" href="/plans.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/plans.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

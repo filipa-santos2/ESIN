@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 // Garantir sessão (mesmo que o header já faça isto, não custa)
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
@@ -14,7 +15,8 @@ if (!isset($_SESSION['doctors'])) {
 
 $doctors = $_SESSION['doctors'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -22,7 +24,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Lista de médicos registados no sistema.</p>
-    <a class="btn btn-primary" href="/doctors_create.php">Criar médico</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/doctors_create.php">Criar médico</a>
   </div>
 </section>
 
@@ -47,8 +49,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($d['phone']) ?></td>
           <td><?= htmlspecialchars($d['email']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/doctors_edit.php?id=<?= urlencode($d['doctor_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/doctor_delete.php?id=<?= urlencode($d['doctor_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode($d['doctor_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode($d['doctor_id']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -56,4 +58,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

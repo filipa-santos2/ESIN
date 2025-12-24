@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['diagnoses'])) $_SESSION['diagnoses'] = [];
@@ -17,7 +18,8 @@ foreach ($_SESSION['diseases'] as $d) {
 
 $diagnoses = $_SESSION['diagnoses'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -25,7 +27,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
     <p style="margin:0;">Associação Paciente ↔ Doença com onset/status/resolution.</p>
-    <a class="btn btn-primary" href="/diagnosis_create.php">Adicionar diagnóstico</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/diagnosis_create.php">Adicionar diagnóstico</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>
@@ -62,8 +64,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars((string)($dg['resolution_date'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($dg['notes'] ?? '')) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/diagnosis_edit.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/diagnosis_delete.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/diagnosis_edit.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/diagnosis_delete.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -71,4 +73,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

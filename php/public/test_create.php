@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['tests'])) $_SESSION['tests'] = [];
@@ -6,7 +7,7 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['allergens'])) $_SESSION['allergens'] = [];
 
 function go_error(string $msg): void {
-  header('Location: /test_create.php?error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/test_create.php?error=' . urlencode($msg));
   exit;
 }
 
@@ -54,11 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'test_result' => $test_result,
   ];
 
-  header('Location: /tests.php?success=' . urlencode('Teste criado com sucesso'));
+  header('Location: ' . $BASE_URL . '/tests.php?success=' . urlencode('Teste criado com sucesso'));
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -73,7 +75,7 @@ include __DIR__ . '/../../includes/header.php';
       Não é possível criar testes sem pacientes e alergénios.
     </div>
   <?php else: ?>
-    <form method="POST" action="/test_create.php">
+    <form method="POST" action="<?= $BASE_URL ?>/test_create.php">
       <div class="field">
         <label for="patient_id">Paciente</label>
         <select id="patient_id" name="patient_id" required>
@@ -117,10 +119,10 @@ include __DIR__ . '/../../includes/header.php';
 
       <div style="display:flex; gap:10px;">
         <button class="btn btn-primary" type="submit">Guardar</button>
-        <a class="btn" href="/tests.php">Cancelar</a>
+        <a class="btn" href="<?= $BASE_URL ?>/tests.php">Cancelar</a>
       </div>
     </form>
   <?php endif; ?>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

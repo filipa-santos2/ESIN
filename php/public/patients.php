@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -12,7 +13,8 @@ if (!isset($_SESSION['patients'])) {
 
 $patients = $_SESSION['patients'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -20,7 +22,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Lista de pacientes registados no sistema.</p>
-    <a class="btn btn-primary" href="/patient_create.php">Criar paciente</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/patient_create.php">Criar paciente</a>
   </div>
 </section>
 
@@ -43,8 +45,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($p['sex']) ?></td>
           <td><?= htmlspecialchars($p['phone']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/patient_edit.php?id=<?= urlencode((string)$p['patient_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/patient_delete.php?id=<?= urlencode((string)$p['patient_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/patient_edit.php?id=<?= urlencode((string)$p['patient_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/patient_delete.php?id=<?= urlencode((string)$p['patient_id']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -52,4 +54,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

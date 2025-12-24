@@ -1,37 +1,295 @@
-.btn {
-  background: var(--primary);
-  color: #06101f;
-  padding: 12px 20px;
-  border-radius: 5px;
-  border: none;
+/* Topbar */
+.topbar{
+  background: rgba(15,23,42,.65);
+  border-bottom:1px solid var(--border);
+  position: sticky;
+  top:0;
+  z-index:10;
+  backdrop-filter: blur(10px);
+}
+
+.topbar .brand{
+  padding: var(--s-3) var(--s-3) 0 var(--s-3);
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+.topbar .brand a{
+  color: var(--text);
+  font-size: 1.15rem;
+}
+
+.nav{
+  display:flex;
+  flex-wrap:wrap;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3) var(--s-3) var(--s-3);
+}
+
+.nav a{
+  color: rgba(234,240,255,.80);
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+
+.nav a:hover{
+  background: rgba(79,140,255,.10);
+  border-color: rgba(79,140,255,.18);
+  transform: translateY(-1px);
+}
+
+.nav a.active{
+  background: rgba(79,140,255,.14);
+  border-color: rgba(79,140,255,.25);
+  color: rgba(234,240,255,.92);
+}
+
+/* ================= BUTTONS ================= */
+
+/* Base */
+.btn{
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color: rgba(234,240,255,.92);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background .2s ease, border-color .2s ease, transform .1s ease;
 }
 
-.btn:hover {
-  background: var(--primary-2);
+/* Hover genérico */
+.btn:hover{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.25);
 }
 
-.table {
+/* Active */
+.btn:active{
+  transform: translateY(1px);
+}
+
+/* ================= VARIANTES ================= */
+
+/* Primário (Editar, Criar, Confirmar) */
+.btn-primary{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.18),
+    rgba(79,140,255,.08)
+  );
+  border-color: rgba(79,140,255,.35);
+  color: rgba(234,240,255,.95);
+}
+
+.btn-primary:hover{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.28),
+    rgba(79,140,255,.14)
+  );
+  border-color: rgba(79,140,255,.55);
+}
+
+/* Secundário (Cancelar, Voltar) */
+.btn-secondary{
+  background: rgba(255,255,255,.03);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.btn-secondary:hover{
+  background: rgba(255,255,255,.06);
+  color: rgba(234,240,255,.85);
+}
+
+/* Perigo (Apagar) */
+.btn-danger{
+  background: linear-gradient(
+    180deg,
+    rgba(255,90,106,.18),
+    rgba(255,90,106,.08)
+  );
+  border-color: rgba(255,90,106,.35);
+  color: rgba(255,230,232,.95);
+}
+
+.btn-danger:hover{
+  background: linear-gradient(
+    180deg,
+    rgba(255,90,106,.28),
+    rgba(255,90,106,.14)
+  );
+  border-color: rgba(255,90,106,.55);
+}
+
+/* ================= TAMANHOS ================= */
+.btn-sm{
+  padding: 8px 12px;
+  font-size: .9rem;
+}
+
+.btn-lg{
+  padding: 12px 18px;
+  font-size: 1.05rem;
+}
+
+.form-actions{
+  display: flex;
+  gap: var(--s-2);
+}
+
+.form-actions .btn{
+  flex: 1;              /* ambos ocupam o mesmo espaço */
+  min-width: 160px;     /* evita ficarem demasiado pequenos */
+  justify-content: center;
+  text-align: center;
+}
+
+.form-actions input.btn{
+  width: 100%;
+}
+
+
+/* ================= TABLES ================= */
+.table{
   width: 100%;
   border-collapse: collapse;
-  background-color: var(--surface);
-  color: var(--text);
-  border-radius: 8px;
+  table-layout: auto;                 /* deixa o browser distribuir larguras */
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
   overflow: hidden;
 }
 
-.table th, .table td {
-  padding: var(--s-3);
-  border-bottom: 1px solid #2a3140;
+.table th,
+.table td{
+  padding: 14px 18px;                 /* mais espaço horizontal */
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
-.table th {
+/* Cabeçalho */
+.table th{
   text-align: left;
-  font-weight: bold;
-  background-color: #2a3140;
+  font-weight: 800;
+  color: rgba(234,240,255,.92);
+  background: rgba(255,255,255,.03);
 }
 
-.table td:hover {
-  background-color: #2f6fff;
+/* Separação visual entre colunas */
+.table th + th,
+.table td + td{
+  border-left: 1px solid var(--border);
+}
+
+/* Hover de linha */
+.table tr:hover td{
+  background: rgba(79,140,255,.06);
+}
+
+/* ===== CONTROLO DE TEXTO POR COLUNA ===== */
+
+/* Nome, Especialidade, Email → podem partir linha */
+.table td:nth-child(1),
+.table td:nth-child(3),
+.table td:nth-child(5){
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Nº de ordem, Telefone, Ações → nunca partem */
+.table td:nth-child(2),
+.table td:nth-child(4),
+.table td:nth-child(6){
+  white-space: nowrap;
+}
+
+/* Coluna Ações controlada */
+.table th:nth-child(6),
+.table td:nth-child(6){
+  width: 220px;
+}
+
+
+
+/* Messages */
+.msg{
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: var(--s-3);
+}
+
+.msg-success{
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.20);
+  color: rgba(234,240,255,.92);
+}
+
+.msg-error{
+  background: rgba(251,113,133,.10);
+  border-color: rgba(251,113,133,.20);
+  color: rgba(234,240,255,.92);
+}
+
+/* Blocos dentro de cards: cria “respiração” */
+.card > * + * {
+  margin-top: 14px;
+}
+
+
+
+
+/* Mensagens (ex: aviso em Produtos) com look mais “product” */
+.msg,
+.notice,
+.alert{
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  color: rgba(234,240,255,.88);
+}
+
+.msg-error, .alert-danger{
+  background: rgba(251,113,133,.10);
+  border-color: rgba(251,113,133,.20);
+}
+
+.msg-success, .alert-success{
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.20);
+}
+
+/* Forçar botões com o mesmo tamanho em qualquer grupo de ações comum */
+.form-actions,
+.actions,
+.buttons,
+.button-group,
+.btn-group{
+  display: flex;
+  gap: 12px;
+}
+
+.form-actions > *,
+.actions > *,
+.buttons > *,
+.button-group > *,
+.btn-group > *{
+  flex: 1 1 0;
+  min-width: 170px;
+}
+
+/* garantir que inputs ocupam a largura do "flex item" */
+.form-actions input[type="submit"],
+.actions input[type="submit"],
+.buttons input[type="submit"],
+.button-group input[type="submit"],
+.btn-group input[type="submit"]{
+  width: 100%;
 }

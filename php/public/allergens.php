@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -12,7 +13,8 @@ if (!isset($_SESSION['allergens'])) {
 
 $allergens = $_SESSION['allergens'];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -20,7 +22,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Catálogo de alergénios (dados em sessão nesta fase).</p>
-    <a class="btn btn-primary" href="/allergen_create.php">Adicionar alergénio</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/allergen_create.php">Adicionar alergénio</a>
   </div>
 </section>
 
@@ -43,8 +45,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($a['common_name']) ?></td>
           <td><?= htmlspecialchars($a['category']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/allergen_edit.php?code=<?= urlencode($a['who_iuis_code']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/allergen_delete.php?code=<?= urlencode($a['who_iuis_code']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['who_iuis_code']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/allergen_delete.php?code=<?= urlencode($a['who_iuis_code']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -52,4 +54,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

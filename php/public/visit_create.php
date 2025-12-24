@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
@@ -10,7 +11,7 @@ if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
 
 function redirect_with_error(string $msg): void {
-  header('Location: /visit_create.php?error=' . urlencode($msg));
+  header('Location: ' . $BASE_URL . '/visit_create.php?error=' . urlencode($msg));
   exit;
 }
 
@@ -160,11 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
   }
 
-  header('Location: /visits.php?success=' . urlencode('Visita criada com sucesso'));
+  header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita criada com sucesso'));
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -179,7 +181,7 @@ include __DIR__ . '/../../includes/header.php';
   <?php elseif (empty($_SESSION['products'])): ?>
     <div class="msg msg-error">Não é possível criar administrações sem produtos. Cria um produto primeiro.</div>
   <?php else: ?>
-    <form method="POST" action="/visit_create.php">
+    <form method="POST" action="<?= $BASE_URL ?>/visit_create.php">
       <div class="field">
         <label for="visit_type">Tipo de visita</label>
         <select id="visit_type" name="visit_type" required>
@@ -277,7 +279,7 @@ include __DIR__ . '/../../includes/header.php';
 
       <div style="display:flex; gap:10px; margin-top:12px;">
         <button class="btn btn-primary" type="submit">Guardar</button>
-        <a class="btn" href="/visits.php">Cancelar</a>
+        <a class="btn" href="<?= $BASE_URL ?>/visits.php">Cancelar</a>
       </div>
     </form>
 
@@ -303,4 +305,4 @@ include __DIR__ . '/../../includes/header.php';
   <?php endif; ?>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

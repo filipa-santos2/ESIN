@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -16,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // validação mínima
   $validSex = ['M', 'F', 'X'];
   if ($full_name === '' || $birth_date === '' || !in_array($sex, $validSex, true)) {
-    header('Location: /patient_create.php?error=Preenche+nome,+data+de+nascimento+e+sexo+v%C3%A1lido');
+    header('Location: ' . $BASE_URL . '/patient_create.php?error=Preenche+nome,+data+de+nascimento+e+sexo+v%C3%A1lido');
     exit;
   }
 
@@ -35,11 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'phone' => $phone,
   ];
 
-  header('Location: /patients.php?success=Paciente+criado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/patients.php?success=Paciente+criado+com+sucesso');
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -49,7 +51,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/patient_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/patient_create.php">
     <div class="field">
       <label for="full_name">Nome completo</label>
       <input id="full_name" name="full_name" required>
@@ -76,9 +78,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/patients.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/patients.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

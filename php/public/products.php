@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -29,7 +30,8 @@ foreach ($_SESSION['manufacturers'] as $m) {
   $manufacturerMap[(int)$m['manufacturer_id']] = (string)$m['name'];
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -37,7 +39,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
     <p style="margin:0;">Lista de produtos (dados em sessão nesta fase).</p>
-    <a class="btn btn-primary" href="/product_create.php">Adicionar produto</a>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/product_create.php">Adicionar produto</a>
   </div>
 
   <?php if (empty($_SESSION['manufacturers'])): ?>
@@ -70,8 +72,8 @@ include __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($p['concentration']) ?></td>
           <td><?= htmlspecialchars($p['unit']) ?></td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="/product_edit.php?id=<?= urlencode((string)$p['product_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="/product_delete.php?id=<?= urlencode((string)$p['product_id']) ?>">Apagar</a>
+            <a class="btn" href="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$p['product_id']) ?>">Editar</a>
+            <a class="btn btn-danger" href="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$p['product_id']) ?>">Apagar</a>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -79,4 +81,4 @@ include __DIR__ . '/../../includes/header.php';
   </table>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

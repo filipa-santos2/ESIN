@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 // php/public/doctors_create.php
 
 // Garantir sessão (caso o header não tenha session_start por alguma razão)
@@ -24,14 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // Validação mínima
   if ($full_name === '' || $license_no === '' || $specialty === '') {
-    header('Location: /doctors_create.php?error=Preenche+nome,+n%C3%BAmero+de+ordem+e+especialidade');
+    header('Location: ' . $BASE_URL . '/doctors_create.php?error=Preenche+nome,+n%C3%BAmero+de+ordem+e+especialidade');
     exit;
   }
 
   // Validar duplicados do license_no (UNIQUE no modelo)
   foreach ($_SESSION['doctors'] as $d) {
     if ((string)$d['license_no'] === (string)$license_no) {
-      header('Location: /doctors_create.php?error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem');
+      header('Location: ' . $BASE_URL . '/doctors_create.php?error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem');
       exit;
     }
   }
@@ -54,11 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   ];
 
   // Redirect para a lista
-  header('Location: /doctors.php?success=M%C3%A9dico+criado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/doctors.php?success=M%C3%A9dico+criado+com+sucesso');
   exit;
 }
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -69,7 +71,7 @@ include __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="/doctors_create.php">
+  <form method="POST" action="<?= $BASE_URL ?>/doctors_create.php">
     <div class="field">
       <label for="full_name">Nome completo</label>
       <input id="full_name" name="full_name" required>
@@ -97,9 +99,9 @@ include __DIR__ . '/../../includes/header.php';
 
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" type="submit">Guardar</button>
-      <a class="btn" href="/doctors.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/doctors.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/../../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $code = strtoupper(trim($_GET['code'] ?? ''));
 if ($code === '') {
-  header('Location: /diseases.php?error=C%C3%B3digo+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/diseases.php?error=C%C3%B3digo+inv%C3%A1lido');
   exit;
 }
 
@@ -22,19 +23,20 @@ for ($i = 0; $i < count($_SESSION['diseases']); $i++) {
 }
 
 if ($index === null) {
-  header('Location: /diseases.php?error=Doen%C3%A7a+n%C3%A3o+encontrada');
+  header('Location: ' . $BASE_URL . '/diseases.php?error=Doen%C3%A7a+n%C3%A3o+encontrada');
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   array_splice($_SESSION['diseases'], $index, 1);
-  header('Location: /diseases.php?success=Doen%C3%A7a+apagada+com+sucesso');
+  header('Location: ' . $BASE_URL . '/diseases.php?success=Doen%C3%A7a+apagada+com+sucesso');
   exit;
 }
 
 $disease = $_SESSION['diseases'][$index];
 
-include __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
@@ -46,12 +48,12 @@ include __DIR__ . '/../../includes/header.php';
     (<?= htmlspecialchars($disease['icd11_code']) ?>)?
   </p>
 
-  <form method="POST" action="/disease_delete.php?code=<?= urlencode($code) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/disease_delete.php?code=<?= urlencode($code) ?>">
     <div style="display:flex; gap:10px;">
       <button class="btn btn-danger" type="submit">Confirmar</button>
-      <a class="btn" href="/diseases.php">Cancelar</a>
+      <a class="btn" href="<?= $BASE_URL ?>/diseases.php">Cancelar</a>
     </div>
   </form>
 </section>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
