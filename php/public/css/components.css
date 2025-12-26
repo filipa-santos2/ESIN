@@ -34,6 +34,61 @@
   border-radius: 2px;
 }
 
+.topbar{
+  display:flex;
+  align-items:center;
+}
+
+.topbar-right{
+  margin-left:auto;
+  padding-right: 24px;
+}
+
+.topbar-right .userbox{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-user{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.userbox{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.user-role{
+  opacity: .8;
+  font-size: .9rem;
+}
+
+.userbox .user-name{
+  text-decoration:none;
+  color: inherit;
+}
+.userbox .user-name:hover{
+  text-decoration: underline; /* opcional */
+}
+
+
+.profile-link{
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: rgba(234,240,255,.85);
+  text-decoration: none;
+}
+.profile-link:hover{
+  background: rgba(255,255,255,.07);
+}
+
 /* ================= NAV ================= */
 
 .nav{

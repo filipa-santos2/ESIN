@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../../includes/header.php'; ?>
 
 <h1>Login</h1>
-<form action="login_process.php" method="POST">
+<form action="<?= $BASE_URL ?>/login_process.php" method="POST">
     <label for="email">E-mail:</label>
     <input type="email" id="email" name="email" required>
     
@@ -14,3 +14,4 @@ require_once __DIR__ . '/../../includes/header.php'; ?>
 </form>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+

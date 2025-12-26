@@ -1,9 +1,13 @@
-<?php require_once __DIR__ . '/../../includes/config.php';
-require_once __DIR__ . '/../../includes/header.php'; ?>
-// Finaliza a sessão e redireciona para a página de login
-session_start();
-session_unset();
-session_destroy();
-header('Location: login.php');
+<?php
+require_once __DIR__ . '/../../includes/config.php';
 
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+unset($_SESSION['user']); // remove só o login (mantém outras sessões, ex: doctors/patients)
+
+session_regenerate_id(true);
+
+header('Location: ' . $BASE_URL . '/login.php?success=Sess%C3%A3o+terminada');
+exit;

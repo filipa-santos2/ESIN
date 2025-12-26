@@ -4,6 +4,10 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
+require_once __DIR__ . '/auth.php';
+require_login();
+
+
 $success = $_GET['success'] ?? null;
 $error   = $_GET['error'] ?? null;
 
@@ -41,40 +45,69 @@ function nav_active(array $pages): string {
   </div>
 
   <nav class="nav">
-    <a class="<?= nav_active(['login.php','reset.php']) ?>" 
-      href="<?= $BASE_URL ?>/login.php">Login</a>
 
-    <a class="<?= nav_active(['doctors.php','doctors_create.php','doctors_edit.php']) ?>"
-      href="<?= $BASE_URL ?>/doctors.php">Médicos</a>
+    <!-- Login (só quando NÃO está autenticado) -->
+    <?php if (empty($_SESSION['user'])): ?>
+      <a class="<?= nav_active(['login.php','reset.php']) ?>"
+        href="<?= $BASE_URL ?>/login.php">Login</a>
+    <?php endif; ?>
 
-    <a class="<?= nav_active(['patients.php','patients_create.php','patients_edit.php']) ?>"
-      href="<?= $BASE_URL ?>/patients.php">Pacientes</a>
+    <!-- Menu (só quando está autenticado) -->
+    <?php if (!empty($_SESSION['user'])): ?>
 
-    <a class="<?= nav_active(['diseases.php','disease_create.php','disease_edit.php','disease_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/diseases.php">Doenças</a>
+      <!-- Médicos (só ADMIN) -->
+      <?php if (($_SESSION['user']['role'] ?? '') === 'admin'): ?>
+        <a class="<?= nav_active(['doctors.php','doctors_create.php','doctors_edit.php']) ?>"
+          href="<?= $BASE_URL ?>/doctors.php">Médicos</a>
+      <?php endif; ?>
 
-    <a class="<?= nav_active(['allergens.php','allergen_create.php','allergen_edit.php','allergen_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/allergens.php">Alergénios</a>
+      <a class="<?= nav_active(['patients.php','patients_create.php','patients_edit.php']) ?>"
+        href="<?= $BASE_URL ?>/patients.php">Pacientes</a>
 
-    <a class="<?= nav_active(['plans.php','plan_create.php','plan_edit.php','plan_delete.php','plan_allergens.php','plan_view.php']) ?>"
-      href="<?= $BASE_URL ?>/plans.php">Planos AIT</a>
+      <a class="<?= nav_active(['diseases.php','disease_create.php','disease_edit.php','disease_delete.php']) ?>"
+        href="<?= $BASE_URL ?>/diseases.php">Doenças</a>
 
-    <a class="<?= nav_active(['visits.php','visit_create.php','visit_edit.php','visit_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/visits.php">Visitas</a>
+      <a class="<?= nav_active(['allergens.php','allergen_create.php','allergen_edit.php','allergen_delete.php']) ?>"
+        href="<?= $BASE_URL ?>/allergens.php">Alergénios</a>
 
-    <a class="<?= nav_active(['diagnoses.php','diagnosis_create.php','diagnosis_edit.php','diagnosis_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/diagnoses.php">Diagnósticos</a>
+      <a class="<?= nav_active(['plans.php','plan_create.php','plan_edit.php','plan_delete.php','plan_allergens.php','plan_view.php']) ?>"
+        href="<?= $BASE_URL ?>/plans.php">Planos AIT</a>
 
-    <a class="<?= nav_active(['products.php','product_create.php','product_edit.php','product_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/products.php">Produtos</a>
+      <a class="<?= nav_active(['visits.php','visit_create.php','visit_edit.php','visit_delete.php']) ?>"
+        href="<?= $BASE_URL ?>/visits.php">Visitas</a>
 
-    <a class="<?= nav_active(['manufacturers.php','manufacturer_create.php','manufacturer_edit.php','manufacturer_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/manufacturers.php">Fabricantes</a>
+      <a class="<?= nav_active(['diagnoses.php','diagnosis_create.php','diagnosis_edit.php','diagnosis_delete.php']) ?>"
+        href="<?= $BASE_URL ?>/diagnoses.php">Diagnósticos</a>
 
-    <a class="<?= nav_active(['tests.php','test_create.php','test_edit.php','test_delete.php']) ?>"
-      href="<?= $BASE_URL ?>/tests.php">Testes</a>
+      <?php if (($_SESSION['user']['role'] ?? '') === 'admin'): ?>
+        <a class="<?= nav_active(['products.php','product_create.php','product_edit.php','product_delete.php']) ?>"
+          href="<?= $BASE_URL ?>/products.php">Produtos</a>
 
+        <a class="<?= nav_active(['manufacturers.php','manufacturer_create.php','manufacturer_edit.php','manufacturer_delete.php']) ?>"
+          href="<?= $BASE_URL ?>/manufacturers.php">Fabricantes</a>
+      <?php endif; ?>
+      
+      <a class="<?= nav_active(['tests.php','test_create.php','test_edit.php','test_delete.php']) ?>"
+        href="<?= $BASE_URL ?>/tests.php">Testes</a>
+
+    <?php endif; ?>
   </nav>
+
+  <div class="topbar-right">
+    <?php if (!empty($_SESSION['user'])): ?>
+      <div class="userbox">
+        <!-- Perfil (clicável) -->
+        <a class="user-name" href="<?= $BASE_URL ?>/profile.php">
+          <?= htmlspecialchars($_SESSION['user']['full_name']) ?>
+        </a>
+
+        <!-- Logout -->
+        <a class="btn btn-small" href="<?= $BASE_URL ?>/logout.php">Logout</a>
+      </div>
+    <?php endif; ?>
+  </div>
+
+
 </header>
 
 <main class="container">
