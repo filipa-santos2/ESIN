@@ -16,9 +16,16 @@ for ($i = 0; $i < count($_SESSION['diagnoses']); $i++) {
 if ($index === null) { header('Location: ' . $BASE_URL . '/diagnoses.php?error=' . urlencode('Diagnóstico não encontrado')); exit; }
 
 function go_edit_error(int $id, string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/diagnosis_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
+
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
@@ -36,6 +43,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!in_array($status, $allowedStatus, true)) {
     go_edit_error($id, 'Status inválido');
   }
+
+  // ===== Validar onset_date =====
+  if (!is_valid_ymd($onset_date)) {
+    go_edit_error($id, 'Onset date inválida');
+  }
+
+  $today = new DateTime('today');
+  $onsetObj = new DateTime($onset_date);
+
+  if ($onsetObj > $today) {
+    go_edit_error($id, 'Onset date não pode ser futura');
+  }
+
+  // ===== Regra status ↔ resolution_date =====
+  if ($status === 'resolved' && $resolution_date === '') {
+    go_edit_error($id, 'Resolution date é obrigatória quando o status é resolved');
+  }
+
+  if ($resolution_date !== '') {
+    if (!is_valid_ymd($resolution_date)) {
+      go_edit_error($id, 'Resolution date inválida');
+    }
+
+    $resObj = new DateTime($resolution_date);
+
+    if ($resObj > $today) {
+      go_edit_error($id, 'Resolution date não pode ser futura');
+    }
+
+    if ($resObj < $onsetObj) {
+      go_edit_error($id, 'Resolution date tem de ser igual ou posterior a onset date');
+    }
+  }
+
+  $resolution_date = ($resolution_date === '' ? null : $resolution_date);
+
+
   if ($resolution_date !== '' && strcmp($resolution_date, $onset_date) <= 0) {
     go_edit_error($id, 'Resolution date tem de ser posterior ao onset date');
   }
@@ -43,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['diagnoses'][$index]['patient_id'] = $patient_id;
   $_SESSION['diagnoses'][$index]['icd11_code'] = $icd11_code;
   $_SESSION['diagnoses'][$index]['onset_date'] = $onset_date;
+  $_SESSION['diagnoses'][$index]['resolution_date'] = $resolution_date;
   $_SESSION['diagnoses'][$index]['status'] = $status;
-  $_SESSION['diagnoses'][$index]['resolution_date'] = ($resolution_date === '' ? null : $resolution_date);
   $_SESSION['diagnoses'][$index]['notes'] = $notes;
 
   header('Location: ' . $BASE_URL . '/diagnoses.php?success=' . urlencode('Diagnóstico atualizado com sucesso'));
@@ -59,10 +103,6 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <section class="card">
   <h1>Editar diagnóstico</h1>
-
-  <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
-  <?php endif; ?>
 
   <form method="POST" action="<?= $BASE_URL ?>/diagnosis_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
@@ -91,7 +131,10 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="onset_date">Onset date</label>
-      <input id="onset_date" name="onset_date" type="date" value="<?= htmlspecialchars((string)($dg['onset_date'] ?? '')) ?>" required>
+      <input type="date" name="onset_date" id="onset_date"
+            min="1900-01-01" max="<?= date('Y-m-d') ?>"
+            value="<?= htmlspecialchars((string)($diag['onset_date'] ?? '')) ?>"
+            required>    
     </div>
 
     <div class="field">
@@ -105,9 +148,10 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="resolution_date">Resolution date (opcional)</label>
-      <input id="resolution_date" name="resolution_date" type="date" value="<?= htmlspecialchars((string)($dg['resolution_date'] ?? '')) ?>">
+      <input type="date" name="resolution_date" id="resolution_date"
+            min="1900-01-01" max="<?= date('Y-m-d') ?>"
+            value="<?= htmlspecialchars((string)($diag['resolution_date'] ?? '')) ?>">    
     </div>
-
     <div class="field">
       <label for="notes">Notas (opcional)</label>
       <textarea id="notes" name="notes" rows="3"><?= htmlspecialchars((string)($dg['notes'] ?? '')) ?></textarea>

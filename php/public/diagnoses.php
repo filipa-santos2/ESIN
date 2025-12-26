@@ -30,13 +30,6 @@ require_once __DIR__ . '/../../includes/header.php';
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/diagnosis_create.php">Adicionar diagnóstico</a>
   </div>
 
-  <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error" style="margin-top:12px;"><?= htmlspecialchars($_GET['error']) ?></div>
-  <?php endif; ?>
-
-  <?php if (!empty($_GET['success'])): ?>
-    <div class="msg msg-success" style="margin-top:12px;"><?= htmlspecialchars($_GET['success']) ?></div>
-  <?php endif; ?>
 </section>
 
 <section class="card">
@@ -63,9 +56,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars((string)($dg['status'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($dg['resolution_date'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($dg['notes'] ?? '')) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/diagnosis_edit.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/diagnosis_delete.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/diagnosis_edit.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/diagnosis_delete.php?id=<?= urlencode((string)$dg['diagnosis_id']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

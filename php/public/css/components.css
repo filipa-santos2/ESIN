@@ -1,4 +1,5 @@
-/* Topbar */
+/* ================= TOPBAR ================= */
+
 .topbar{
   background: rgba(15,23,42,.65);
   border-bottom:1px solid var(--border);
@@ -9,15 +10,31 @@
 }
 
 .topbar .brand{
-  padding: var(--s-3) var(--s-3) 0 var(--s-3);
-  font-weight: 700;
-  letter-spacing: .2px;
+  position: relative;
+  padding: var(--s-3) var(--s-3) 8px var(--s-3);
+  font-weight: 900;
+  letter-spacing: .6px;
 }
 
 .topbar .brand a{
   color: var(--text);
-  font-size: 1.15rem;
+  font-size: 1.25rem;
+  text-decoration: none;
 }
+
+/* linha inferior da marca */
+.topbar .brand::after{
+  content:"";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--primary));
+  border-radius: 2px;
+}
+
+/* ================= NAV ================= */
 
 .nav{
   display:flex;
@@ -49,7 +66,6 @@
 
 /* ================= BUTTONS ================= */
 
-/* Base */
 .btn{
   appearance: none;
   border: 1px solid var(--border);
@@ -62,20 +78,17 @@
   transition: background .2s ease, border-color .2s ease, transform .1s ease;
 }
 
-/* Hover genérico */
 .btn:hover{
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.25);
 }
 
-/* Active */
 .btn:active{
   transform: translateY(1px);
 }
 
-/* ================= VARIANTES ================= */
+/* Variantes */
 
-/* Primário (Editar, Criar, Confirmar) */
 .btn-primary{
   background: linear-gradient(
     180deg,
@@ -95,7 +108,6 @@
   border-color: rgba(79,140,255,.55);
 }
 
-/* Secundário (Cancelar, Voltar) */
 .btn-secondary{
   background: rgba(255,255,255,.03);
   border-color: var(--border);
@@ -107,7 +119,6 @@
   color: rgba(234,240,255,.85);
 }
 
-/* Perigo (Apagar) */
 .btn-danger{
   background: linear-gradient(
     180deg,
@@ -127,146 +138,76 @@
   border-color: rgba(255,90,106,.55);
 }
 
-/* ================= TAMANHOS ================= */
-.btn-sm{
-  padding: 8px 12px;
-  font-size: .9rem;
+/* ================= BUTTON SOFT (Editar / ações neutras) ================= */
+
+/* ================= VARIANTES PARA AÇÕES EM TABELAS ================= */
+
+/* VER: mais destacado (azul “principal”, mas sem competir com o Criar) */
+.btn-editar{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.24),
+    rgba(79,140,255,.10)
+  );
+  border-color: rgba(79,140,255,.55);
+  color: rgba(234,240,255,.96);
+}
+.btn-editar:hover{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.34),
+    rgba(79,140,255,.16)
+  );
+  border-color: rgba(79,140,255,.72);
 }
 
-.btn-lg{
-  padding: 12px 18px;
-  font-size: 1.05rem;
+/* EDITAR: continua “soft” (azul suave) */
+.btn-soft{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.14),
+    rgba(79,140,255,.05)
+  );
+  border-color: rgba(79,140,255,.32);
+  color: rgba(234,240,255,.94);
+}
+.btn-soft:hover{
+  background: linear-gradient(
+    180deg,
+    rgba(79,140,255,.22),
+    rgba(79,140,255,.10)
+  );
+  border-color: rgba(79,140,255,.50);
 }
 
-.form-actions{
-  display: flex;
-  gap: var(--s-2);
+/* ALERGÉNIOS: variante “medical” teal (diferente do azul) */
+.btn-teal{
+  background: linear-gradient(
+    180deg,
+    rgba(45,212,191,.18),
+    rgba(45,212,191,.06)
+  );
+  border-color: rgba(45,212,191,.35);
+  color: rgba(234,255,252,.95);
 }
-
-.form-actions .btn{
-  flex: 1;              /* ambos ocupam o mesmo espaço */
-  min-width: 160px;     /* evita ficarem demasiado pequenos */
-  justify-content: center;
-  text-align: center;
-}
-
-.form-actions input.btn{
-  width: 100%;
-}
-
-
-/* ================= TABLES ================= */
-.table{
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;                 /* deixa o browser distribuir larguras */
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--border);
-  border-radius: var(--r-2);
-  overflow: hidden;
-}
-
-.table th,
-.table td{
-  padding: 14px 18px;                 /* mais espaço horizontal */
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-/* Cabeçalho */
-.table th{
-  text-align: left;
-  font-weight: 800;
-  color: rgba(234,240,255,.92);
-  background: rgba(255,255,255,.03);
-}
-
-/* Separação visual entre colunas */
-.table th + th,
-.table td + td{
-  border-left: 1px solid var(--border);
-}
-
-/* Hover de linha */
-.table tr:hover td{
-  background: rgba(79,140,255,.06);
-}
-
-/* ===== CONTROLO DE TEXTO POR COLUNA ===== */
-
-/* Nome, Especialidade, Email → podem partir linha */
-.table td:nth-child(1),
-.table td:nth-child(3),
-.table td:nth-child(5){
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* Nº de ordem, Telefone, Ações → nunca partem */
-.table td:nth-child(2),
-.table td:nth-child(4),
-.table td:nth-child(6){
-  white-space: nowrap;
-}
-
-/* Coluna Ações controlada */
-.table th:nth-child(6),
-.table td:nth-child(6){
-  width: 220px;
+.btn-teal:hover{
+  background: linear-gradient(
+    180deg,
+    rgba(45,212,191,.26),
+    rgba(45,212,191,.12)
+  );
+  border-color: rgba(45,212,191,.55);
 }
 
 
-
-/* Messages */
-.msg{
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  margin-bottom: var(--s-3);
-}
-
-.msg-success{
-  background: rgba(34,197,94,.10);
-  border-color: rgba(34,197,94,.20);
-  color: rgba(234,240,255,.92);
-}
-
-.msg-error{
-  background: rgba(251,113,133,.10);
-  border-color: rgba(251,113,133,.20);
-  color: rgba(234,240,255,.92);
-}
-
-/* Blocos dentro de cards: cria “respiração” */
-.card > * + * {
-  margin-top: 14px;
-}
+/* Tamanhos */
+.btn-sm{ padding: 8px 12px; font-size: .9rem; }
+.btn-lg{ padding: 12px 18px; font-size: 1.05rem; }
 
 
+/* ================= BUTTON GROUPS (GENÉRICO) ================= */
+/* Útil para forms e blocos fora de tabelas. Dentro de tabelas é feito override mais abaixo. */
 
-
-/* Mensagens (ex: aviso em Produtos) com look mais “product” */
-.msg,
-.notice,
-.alert{
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.03);
-  color: rgba(234,240,255,.88);
-}
-
-.msg-error, .alert-danger{
-  background: rgba(251,113,133,.10);
-  border-color: rgba(251,113,133,.20);
-}
-
-.msg-success, .alert-success{
-  background: rgba(34,197,94,.10);
-  border-color: rgba(34,197,94,.20);
-}
-
-/* Forçar botões com o mesmo tamanho em qualquer grupo de ações comum */
 .form-actions,
 .actions,
 .buttons,
@@ -285,7 +226,6 @@
   min-width: 170px;
 }
 
-/* garantir que inputs ocupam a largura do "flex item" */
 .form-actions input[type="submit"],
 .actions input[type="submit"],
 .buttons input[type="submit"],
@@ -293,3 +233,184 @@
 .btn-group input[type="submit"]{
   width: 100%;
 }
+
+/* ================= TABLES (GENÉRICO, N COLUNAS) ================= */
+/* Aplica a qualquer <table> dentro de .card, e também a .table */
+
+.card table,
+.table{
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+
+.card table th,
+.card table td,
+.table th,
+.table td{
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.card table th,
+.table th{
+  text-align: left;
+  font-weight: 800;
+  color: rgba(234,240,255,.92);
+  background: rgba(255,255,255,.03);
+}
+
+.card table th + th,
+.card table td + td,
+.table th + th,
+.table td + td{
+  border-left: 1px solid var(--border);
+}
+
+.card table tr:hover td,
+.table tr:hover td{
+  background: rgba(79,140,255,.06);
+}
+
+/* Texto longo: por defeito quebra em espaços (não partir a meio) */
+.card table td,
+.table td{
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* ================= MESSAGES ================= */
+
+.msg,
+.notice,
+.alert{
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  color: rgba(234,240,255,.88);
+  margin-bottom: var(--s-3);
+}
+
+.msg-success,
+.alert-success{
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.20);
+}
+
+.msg-error,
+.alert-danger{
+  background: rgba(251,113,133,.10);
+  border-color: rgba(251,113,133,.20);
+}
+
+/* ================= CARD FLOW ================= */
+
+.card > * + *{
+  margin-top: 18px;
+}
+
+.card h1,
+.card h2{
+  margin-bottom: 6px;
+}
+
+/* ================= TABLE OVERRIDES (DADOS TÍPICOS) ================= */
+/* Opcional: mantém números/telefones mais limpos quando estas colunas existem. */
+
+.card table td:nth-child(2),
+.card table td:nth-child(4),
+.table td:nth-child(2),
+.table td:nth-child(4){
+  white-space: nowrap;
+}
+
+/* Se a tua tabela tiver email na 5ª coluna, permite quebra quando necessário (sem rebentar layout) */
+.card table td:nth-child(5),
+.table td:nth-child(5){
+  overflow-wrap: break-word; /* menos agressivo que anywhere */
+  word-break: normal;
+}
+
+/* ================= AÇÕES EM TABELAS (GLOBAL) ================= */
+/* Ações centrado em TODAS as tabelas */
+
+.card table th:last-child,
+.card table td:last-child,
+.table th:last-child,
+.table td:last-child{
+  text-align: center;      /* centro horizontal */
+  vertical-align: middle;  /* centro vertical */
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Dentro de tabelas, botões não devem esticar */
+.card table .actions,
+.table .actions{
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.card table .actions > *,
+.table .actions > *{
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* ================= TABLE POLISH (para .table E para .card table) ================= */
+
+/* Zebra subtil para leitura */
+.card table tbody tr:nth-child(even) td,
+.table tbody tr:nth-child(even) td{
+  background: rgba(255,255,255,.015);
+}
+
+/* Hover ligeiramente mais visível  */
+.card table tbody tr:hover td,
+.table tbody tr:hover td{
+  background: rgba(79,140,255,.08);
+}
+
+/* Cabeçalho da tabela mais destacado */
+.card table thead th,
+.table thead th{
+  background: rgba(255,255,255,.05);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+/* Reduz ligeiramente a altura das linhas */
+.card table th,
+.card table td,
+.table th,
+.table td{
+  padding: 12px 16px;
+}
+
+/* Limitar impacto visual do email (se for 5ª coluna) */
+.card table td:nth-child(5),
+.table td:nth-child(5){
+  max-width: 220px;
+}
+
+/* Cards largos para tabelas grandes (ex: planos AIT) */
+.card-wide{
+  max-width: 1300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Permitir cards largos mesmo com a regra do forms.css */
+main.container > .card.card-wide{
+  max-width: 1300px;
+}
+

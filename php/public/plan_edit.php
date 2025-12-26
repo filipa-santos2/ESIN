@@ -24,9 +24,16 @@ if ($index === null) {
 }
 
 function go_edit_error(int $id, string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/plan_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
+
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
@@ -54,10 +61,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!in_array($build_up_protocol, $allowedBuild, true)) go_edit_error($id, 'Build-up protocol inválido');
   if (!in_array($maintenance_protocol, $allowedMaint, true)) go_edit_error($id, 'Maintenance protocol inválido');
 
-  if ($end_date !== '' && strcmp($end_date, $start_date) <= 0) {
-    go_edit_error($id, 'End date tem de ser posterior a start date');
+  // Validar start_date (obrigatória)
+if (!is_valid_ymd($start_date)) {
+  go_edit_error($id, 'Start date inválida');
+}
+
+// Validar end_date (opcional, mas se existir tem de ser válida e >= start_date)
+if ($end_date !== '') {
+  if (!is_valid_ymd($end_date)) {
+    go_edit_error($id, 'End date inválida');
   }
-  $end_date = ($end_date === '' ? null : $end_date);
+
+  $startObj = new DateTime($start_date);
+  $endObj   = new DateTime($end_date);
+
+  if ($endObj < $startObj) {
+    go_edit_error($id, 'End date tem de ser igual ou posterior a start date');
+  }
+}
+
+$end_date = ($end_date === '' ? null : $end_date);
 
   $_SESSION['aitplans'][$index]['patient_id'] = $patient_id;
   $_SESSION['aitplans'][$index]['product_id'] = $product_id;
@@ -82,10 +105,6 @@ require_once __DIR__ . '/../../includes/header.php';
 <section class="card">
   <h1>Editar plano AIT</h1>
 
-  <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
-  <?php endif; ?>
-
   <form method="POST" action="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
@@ -104,7 +123,6 @@ require_once __DIR__ . '/../../includes/header.php';
       <select id="product_id" name="product_id" required>
         <?php foreach ($_SESSION['products'] as $pr): ?>
 <?php
-require_once __DIR__ . '/../../includes/config.php';
             $pid = $pr['product_id'] ?? $pr['serial_number'] ?? '';
             $label = '';
             if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
@@ -122,13 +140,18 @@ require_once __DIR__ . '/../../includes/config.php';
     <div class="field">
       <label for="start_date">Start date</label>
       <input id="start_date" name="start_date" type="date"
-             value="<?= htmlspecialchars((string)($pl['start_date'] ?? '')) ?>" required>
+            min="1900-01-01"
+            max="<?= date('Y-m-d') ?>"
+            value="<?= htmlspecialchars((string)($pl['start_date'] ?? '')) ?>"
+            required>
     </div>
 
     <div class="field">
       <label for="end_date">End date (opcional)</label>
       <input id="end_date" name="end_date" type="date"
-             value="<?= htmlspecialchars((string)($pl['end_date'] ?? '')) ?>">
+            min="1900-01-01"
+            max="<?= date('Y-m-d') ?>"
+            value="<?= htmlspecialchars((string)($pl['end_date'] ?? '')) ?>">
     </div>
 
     <div class="field">

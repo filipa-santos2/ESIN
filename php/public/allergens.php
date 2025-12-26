@@ -27,7 +27,7 @@ require_once __DIR__ . '/../../includes/header.php';
 </section>
 
 <section class="card">
-  <table>
+  <table class="table table-compact">
     <thead>
       <tr>
         <th>Código (WHO/IUIS)</th>
@@ -44,9 +44,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($a['species']) ?></td>
           <td><?= htmlspecialchars($a['common_name']) ?></td>
           <td><?= htmlspecialchars($a['category']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['who_iuis_code']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/allergen_delete.php?code=<?= urlencode($a['who_iuis_code']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['who_iuis_code']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/allergen_delete.php?code=<?= urlencode($a['who_iuis_code']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

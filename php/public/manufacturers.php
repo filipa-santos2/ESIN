@@ -13,7 +13,6 @@ if (!isset($_SESSION['manufacturers'])) {
 
 $manufacturers = $_SESSION['manufacturers'];
 
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -44,9 +43,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($m['country']) ?></td>
           <td><?= htmlspecialchars($m['phone']) ?></td>
           <td><?= htmlspecialchars($m['email']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/manufacturer_edit.php?id=<?= urlencode((string)$m['manufacturer_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/manufacturer_delete.php?id=<?= urlencode((string)$m['manufacturer_id']) ?>">Apagar</a>
+          <td>
+            <div class="actions"> 
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/manufacturer_edit.php?id=<?= urlencode((string)$m['manufacturer_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/manufacturer_delete.php?id=<?= urlencode((string)$m['manufacturer_id']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

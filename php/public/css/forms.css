@@ -1,19 +1,27 @@
-.form{display:grid; gap: var(--s-3);}
+/* =============== FORMS (layout + inputs) =============== */
+
+.form{
+  display: grid;
+  gap: var(--s-3);
+  max-width: 720px;
+}
 
 .form-row{
-  display:grid;
+  display: grid;
   grid-template-columns: 1fr 2fr;
   gap: var(--s-2);
-  align-items:center;
+  align-items: center;
 }
 
 label{
+  display: block;
+  margin-top: 6px;
   font-size: .95rem;
   color: var(--muted);
 }
 
 input, select, textarea{
-  width:100%;
+  width: 100%;
   padding: 11px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -28,68 +36,21 @@ input:focus, select:focus, textarea:focus{
   box-shadow: 0 0 0 4px rgba(45,212,191,.14);
 }
 
-textarea{ min-height: 96px; resize: vertical; }
+textarea{
+  min-height: 96px;
+  resize: vertical;
+}
+
+/* Layout do form (sem “skin” de botões) */
+form{
+  display: grid;
+  gap: 12px;
+}
 
 .form-actions{
-  display:flex;
-  justify-content:flex-end;
+  display: flex;
+  justify-content: flex-end;
   gap: var(--s-2);
-}
-
-/* Botões - funciona mesmo sem classes (ex: input submit do login) */
-button,
-input[type="submit"],
-input[type="button"],
-a.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 11px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  color: #06101f;
-
-  font-weight: 800;
-  letter-spacing: .2px;
-  cursor: pointer;
-
-  box-shadow: 0 12px 26px rgba(79,140,255,.18);
-  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
-}
-
-button:hover,
-input[type="submit"]:hover,
-input[type="button"]:hover,
-a.btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.03);
-  box-shadow: 0 16px 34px rgba(79,140,255,.22);
-}
-
-button:active,
-input[type="submit"]:active,
-input[type="button"]:active,
-a.btn:active {
-  transform: translateY(0);
-}
-
-/* Botões “secundários” e “perigo” caso uses classes */
-.btn-secondary{
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  border: 1px solid var(--border);
-  box-shadow: none;
-}
-
-.btn-danger{
-  background: rgba(251,113,133,.14);
-  color: var(--text);
-  border: 1px solid rgba(251,113,133,.22);
-  box-shadow: none;
 }
 
 /* Botão do login não ficar colado e ter largura coerente */
@@ -98,32 +59,47 @@ input[type="submit"]{
   min-width: 140px;
 }
 
-/* Formulários: largura mais agradável (especialmente Login) */
-.form{
-  max-width: 720px;
-}
-
-
-/* Espaço consistente entre campos e o botão */
-form{
-  display: grid;
-  gap: 12px;
-}
-
-/* Se os inputs estiverem dentro de labels ou parágrafos, garante margem */
-label{
-  display: block;
-  margin-top: 6px;
-}
-
-/* Botão com mais “respiração” */
-button,
-input[type="submit"],
-input[type="button"]{
-  margin-top: 10px;
-}
-
+/* Se quiseres o submit alinhado à esquerda dentro do grid */
 input[type="submit"],
 button[type="submit"]{
-  justify-self: start;   /* usa "end" se quiseres à direita */
+  justify-self: start; /* usa "end" se quiseres à direita */
 }
+
+/* Cards "de autenticação" mais estreitos sem mexer no HTML */
+.card .form{ max-width: 640px; }
+
+main.container > .card{
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Fallback: só para botões sem classe .btn (para não mudar nada) */
+button:not(.btn),
+input[type="submit"]:not(.btn),
+input[type="button"]:not(.btn){
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 11px 18px;
+  border-radius: 14px;
+
+  background: linear-gradient(180deg, rgba(99,125,170,.45), rgba(72,96,140,.45));
+  border: 1px solid rgba(140,170,210,.35);
+  color: rgba(240,245,255,.95);
+
+  font-weight: 700;
+  cursor: pointer;
+
+  box-shadow: 0 6px 16px rgba(0,0,0,.25);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+
+/* Dropdown: garantir opções legíveis */
+select option{
+  color: #000;
+  background: #fff;
+}
+

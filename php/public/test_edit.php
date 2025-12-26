@@ -20,6 +20,12 @@ function go_edit_error(int $id, string $msg): void {
   exit;
 }
 
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
   $who_iuis_code = trim($_POST['who_iuis_code'] ?? '');
@@ -32,6 +38,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($patient_id <= 0 || $who_iuis_code === '' || $test_date === '' || $test_type === '' || $test_result === '') {
     go_edit_error($id, 'Preenche todos os campos');
   }
+
+  $test_date = trim($_POST['test_date'] ?? '');
+
+  if ($test_date === '') {
+    go_edit_error($id, 'Data do teste é obrigatória');
+  }
+
+  if (!is_valid_ymd($test_date)) {
+    go_edit_error($id, 'Data do teste inválida');
+  }
+
+  $testObj = new DateTime($test_date);
+  $today   = new DateTime('today');
+
+  if ($testObj > $today) {
+    go_edit_error($id, 'Data do teste não pode ser futura');
+  }
+
+
   if (!in_array($test_result, $allowed, true)) {
     go_edit_error($id, 'Resultado inválido');
   }
@@ -86,7 +111,15 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="test_date">Data do teste</label>
-      <input id="test_date" name="test_date" type="date" value="<?= htmlspecialchars((string)$t['test_date']) ?>" required>
+      <input
+        id="test_date"
+        name="test_date"
+        type="date"
+        min="1900-01-01"
+        max="<?= date('Y-m-d') ?>"
+        value="<?= htmlspecialchars((string)($test['test_date'] ?? '')) ?>"
+        required
+      >
     </div>
 
     <div class="field">

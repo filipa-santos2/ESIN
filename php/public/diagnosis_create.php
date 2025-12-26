@@ -7,8 +7,15 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['diseases'])) $_SESSION['diseases'] = [];
 
 function go_error(string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/diagnosis_create.php?error=' . urlencode($msg));
   exit;
+}
+
+
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,10 +34,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!in_array($status, $allowedStatus, true)) {
     go_error('Status inválido');
   }
-  // regra do modelo: resolution_date NULL ou > onset_date
-  if ($resolution_date !== '' && strcmp($resolution_date, $onset_date) <= 0) {
-    go_error('Resolution date tem de ser posterior ao onset date');
+  
+  // ===== Validar onset_date =====
+  if (!is_valid_ymd($onset_date)) {
+    go_error('Onset date inválida');
   }
+
+  $today = new DateTime('today');
+  $onsetObj = new DateTime($onset_date);
+
+  if ($onsetObj > $today) {
+    go_error('Onset date não pode ser futura');
+  }
+
+  // ===== Regra status ↔ resolution_date =====
+  if ($status === 'resolved' && $resolution_date === '') {
+    go_error('Resolution date é obrigatória quando o status é resolved');
+  }
+
+  if ($resolution_date !== '') {
+    if (!is_valid_ymd($resolution_date)) {
+      go_error('Resolution date inválida');
+    }
+
+    $resObj = new DateTime($resolution_date);
+
+    if ($resObj > $today) {
+      go_error('Resolution date não pode ser futura');
+    }
+
+    if ($resObj < $onsetObj) {
+      go_error('Resolution date tem de ser igual ou posterior a onset date');
+    }
+  }
+
+  $resolution_date = ($resolution_date === '' ? null : $resolution_date);
 
   $patientExists = false;
   foreach ($_SESSION['patients'] as $p) {
@@ -54,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'icd11_code' => $icd11_code,
     'onset_date' => $onset_date,
     'status' => $status,
-    'resolution_date' => ($resolution_date === '' ? null : $resolution_date),
+    'resolution_date' => $resolution_date,
     'notes' => $notes,
   ];
 
@@ -62,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -96,7 +133,8 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="onset_date">Onset date</label>
-      <input id="onset_date" name="onset_date" type="date" required>
+      <input type="date" name="onset_date" id="onset_date"
+            min="1900-01-01" max="<?= date('Y-m-d') ?>" required>
     </div>
 
     <div class="field">
@@ -110,7 +148,8 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="resolution_date">Resolution date (opcional)</label>
-      <input id="resolution_date" name="resolution_date" type="date">
+      <input type="date" name="resolution_date" id="resolution_date"
+            min="1900-01-01" max="<?= date('Y-m-d') ?>">
     </div>
 
     <div class="field">

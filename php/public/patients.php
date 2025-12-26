@@ -27,7 +27,7 @@ require_once __DIR__ . '/../../includes/header.php';
 </section>
 
 <section class="card">
-  <table>
+  <table class="table table-compact">
     <thead>
       <tr>
         <th>Nome</th>
@@ -44,9 +44,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($p['birth_date']) ?></td>
           <td><?= htmlspecialchars($p['sex']) ?></td>
           <td><?= htmlspecialchars($p['phone']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/patient_edit.php?id=<?= urlencode((string)$p['patient_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/patient_delete.php?id=<?= urlencode((string)$p['patient_id']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/patient_edit.php?id=<?= urlencode((string)$p['patient_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/patient_delete.php?id=<?= urlencode((string)$p['patient_id']) ?>">Apagar</a>
+            </div>  
           </td>
         </tr>
       <?php endforeach; ?>

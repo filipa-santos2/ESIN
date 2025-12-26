@@ -23,9 +23,11 @@ $visit = $_SESSION['visits'][$visitIndex];
 $type = (string)$visit['visit_type'];
 
 function redirect_edit_error(int $id, string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/visit_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
+
 
 function find_child_index(array $arr, int $visitId): ?int {
   for ($i = 0; $i < count($arr); $i++) {
@@ -36,6 +38,16 @@ function find_child_index(array $arr, int $visitId): ?int {
 
 $consultIdx = find_child_index($_SESSION['consultations'], $id);
 $adminIdx   = find_child_index($_SESSION['administrations'], $id);
+
+function is_valid_dtlocal(string $dt): bool {
+  $obj = DateTime::createFromFormat('Y-m-d\TH:i', $dt);
+  return $obj && $obj->format('Y-m-d\TH:i') === $dt;
+}
+
+function dtlocal_to_obj(string $dt): DateTime {
+  return DateTime::createFromFormat('Y-m-d\TH:i', $dt);
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
@@ -48,10 +60,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($patient_id <= 0 || $doctor_id <= 0) redirect_edit_error($id, 'Seleciona paciente e médico');
   if ($dt_scheduled === '' || $dt_start === '') redirect_edit_error($id, 'Preenche data/hora agendada e início');
 
-  // regra: end NULL ou end >= start (se quiseres estrito, troca < por <=)
-  if ($dt_end !== '' && strcmp($dt_end, $dt_start) < 0) {
-    redirect_edit_error($id, 'A data/hora de fim tem de ser igual ou posterior ao início');
+  if (!is_valid_dtlocal($dt_scheduled)) redirect_edit_error($id, 'Data/hora agendada inválida');
+  if (!is_valid_dtlocal($dt_start)) redirect_edit_error($id, 'Data/hora de início inválida');
+  if ($dt_end !== '' && !is_valid_dtlocal($dt_end)) redirect_edit_error($id, 'Data/hora de fim inválida');
+
+  $scheduledObj = dtlocal_to_obj($dt_scheduled);
+  $startObj     = dtlocal_to_obj($dt_start);
+
+  if ($scheduledObj > $startObj) {
+    redirect_edit_error($id, 'A data/hora agendada tem de ser igual ou anterior ao início');
   }
+
+  if ($dt_end !== '') {
+    $endObj = dtlocal_to_obj($dt_end);
+    if ($endObj < $startObj) {
+      redirect_edit_error($id, 'A data/hora de fim tem de ser igual ou posterior ao início');
+    }
+  }
+
 
   // atualizar superclasse
   $_SESSION['visits'][$visitIndex]['patient_id'] = $patient_id;
@@ -167,7 +193,9 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php if (!empty($_GET['error'])): ?>
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
-
+  
+  <?php $maxDT = date('Y-m-d\TH:i'); ?>
+  
   <form method="POST" action="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="patient_id">Paciente</label>
@@ -196,19 +224,22 @@ require_once __DIR__ . '/../../includes/header.php';
     <div class="field">
       <label for="datetime_scheduled">Data/hora agendada</label>
       <input id="datetime_scheduled" name="datetime_scheduled" type="datetime-local"
-             value="<?= htmlspecialchars((string)$visit['datetime_scheduled']) ?>" required>
+       min="1900-01-01T00:00" max="<?= $maxDT ?>"
+       value="<?= htmlspecialchars((string)$visit['datetime_scheduled']) ?>" required>
     </div>
 
     <div class="field">
       <label for="datetime_start">Data/hora de início</label>
       <input id="datetime_start" name="datetime_start" type="datetime-local"
-             value="<?= htmlspecialchars((string)$visit['datetime_start']) ?>" required>
+       min="1900-01-01T00:00" max="<?= $maxDT ?>"
+       value="<?= htmlspecialchars((string)$visit['datetime_start']) ?>" required>
     </div>
 
     <div class="field">
       <label for="datetime_end">Data/hora de fim (opcional)</label>
       <input id="datetime_end" name="datetime_end" type="datetime-local"
-             value="<?= htmlspecialchars((string)($visit['datetime_end'] ?? '')) ?>">
+       min="1900-01-01T00:00" max="<?= $maxDT ?>"
+       value="<?= htmlspecialchars((string)($visit['datetime_end'] ?? '')) ?>">
     </div>
 
     <?php if ($type === 'consultation'): ?>
@@ -221,7 +252,7 @@ require_once __DIR__ . '/../../includes/header.php';
         </div>
       </div>
     <?php endif; ?>
-
+    
     <?php if ($type === 'administration'): ?>
       <div class="card" style="margin-top:12px;">
         <h2>Administration</h2>

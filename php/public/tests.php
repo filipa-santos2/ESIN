@@ -32,14 +32,6 @@ require_once __DIR__ . '/../../includes/header.php';
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/test_create.php">Adicionar teste</a>
   </div>
 
-  <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error" style="margin-top:12px;"><?= htmlspecialchars($_GET['error']) ?></div>
-  <?php endif; ?>
-
-  <?php if (!empty($_GET['success'])): ?>
-    <div class="msg msg-success" style="margin-top:12px;"><?= htmlspecialchars($_GET['success']) ?></div>
-  <?php endif; ?>
-
   <?php if (empty($_SESSION['patients']) || empty($_SESSION['allergens'])): ?>
     <div class="msg msg-error" style="margin-top:12px;">
       Para criar testes precisas de pelo menos um <b>paciente</b> e um <b>alergénio</b>.
@@ -67,9 +59,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars((string)$t['test_date']) ?></td>
           <td><?= htmlspecialchars((string)$t['test_type']) ?></td>
           <td><?= htmlspecialchars((string)$t['test_result']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/test_edit.php?id=<?= urlencode((string)$t['test_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/test_delete.php?id=<?= urlencode((string)$t['test_id']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/test_edit.php?id=<?= urlencode((string)$t['test_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/test_delete.php?id=<?= urlencode((string)$t['test_id']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

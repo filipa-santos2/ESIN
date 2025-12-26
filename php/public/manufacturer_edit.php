@@ -38,6 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 
+  // Telefone opcional, mas se existir tem de ser telemóvel PT válido
+  if ($phone !== '' && !preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
+    header('Location: ' . $BASE_URL . '/manufacturer_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode('Telefone inválido (telemóvel português, ex: 91xxxxxxx)'));
+    exit;
+  }
+
+
   // UNIQUE(name) (ignorando o próprio)
   foreach ($_SESSION['manufacturers'] as $m) {
     if ((int)$m['manufacturer_id'] !== $id &&
@@ -83,7 +90,18 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="phone">Telefone</label>
-      <input id="phone" name="phone" value="<?= htmlspecialchars($manufacturer['phone']) ?>">
+      <input
+        id="phone"
+        name="phone"
+        type="tel"
+        value="<?= htmlspecialchars($manufacturer['phone']) ?>"
+        inputmode="numeric"
+        autocomplete="tel"
+        pattern="^(91|92|93|96)[0-9]{7}$"
+        minlength="9"
+        maxlength="9"
+        title="Introduz um telemóvel português válido (91, 92, 93 ou 96)"
+      >
     </div>
 
     <div class="field">

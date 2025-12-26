@@ -11,9 +11,23 @@ if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
 if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
 
 function redirect_with_error(string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/visit_create.php?error=' . urlencode($msg));
   exit;
 }
+
+
+function is_valid_dtlocal(string $dt): bool {
+  // datetime-local normalmente vem como: 2025-12-26T14:30 (sem segundos)
+  $obj = DateTime::createFromFormat('Y-m-d\TH:i', $dt);
+  return $obj && $obj->format('Y-m-d\TH:i') === $dt;
+}
+
+function dtlocal_to_obj(string $dt): DateTime {
+  // assume já validado
+  return DateTime::createFromFormat('Y-m-d\TH:i', $dt);
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $visit_type = trim($_POST['visit_type'] ?? '');
@@ -35,14 +49,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_with_error('Seleciona paciente e médico');
   }
 
-  if ($dt_scheduled === '' || $dt_start === '') {
-    redirect_with_error('Preenche data/hora agendada e data/hora de início');
+  if (!is_valid_dtlocal($dt_scheduled)) {
+  redirect_with_error('Data/hora agendada inválida');
+  }
+  if (!is_valid_dtlocal($dt_start)) {
+    redirect_with_error('Data/hora de início inválida');
+  }
+  if ($dt_end !== '' && !is_valid_dtlocal($dt_end)) {
+    redirect_with_error('Data/hora de fim inválida');
   }
 
-  // Regra do modelo: datetime_end é NULL ou end >= start
-  if ($dt_end !== '' && strcmp($dt_end, $dt_start) < 0) {
-    redirect_with_error('A data/hora de fim tem de ser igual ou posterior ao início');
+  $scheduledObj = dtlocal_to_obj($dt_scheduled);
+  $startObj     = dtlocal_to_obj($dt_start);
+
+  // (opcional, mas faz sentido): agendada não pode ser depois do início
+  if ($scheduledObj > $startObj) {
+    redirect_with_error('A data/hora agendada tem de ser igual ou anterior ao início');
   }
+
+  // end opcional: se existir, end >= start
+  if ($dt_end !== '') {
+    $endObj = dtlocal_to_obj($dt_end);
+    if ($endObj < $startObj) {
+      redirect_with_error('A data/hora de fim tem de ser igual ou posterior ao início');
+    }
+  }
+
 
   // Validar existência FK
   $patientExists = false;
@@ -181,6 +213,7 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php elseif (empty($_SESSION['products'])): ?>
     <div class="msg msg-error">Não é possível criar administrações sem produtos. Cria um produto primeiro.</div>
   <?php else: ?>
+  <?php $maxDT = date('Y-m-d\TH:i'); ?>
     <form method="POST" action="<?= $BASE_URL ?>/visit_create.php">
       <div class="field">
         <label for="visit_type">Tipo de visita</label>
@@ -210,17 +243,20 @@ require_once __DIR__ . '/../../includes/header.php';
 
       <div class="field">
         <label for="datetime_scheduled">Data/hora agendada</label>
-        <input id="datetime_scheduled" name="datetime_scheduled" type="datetime-local" required>
+        <input id="datetime_scheduled" name="datetime_scheduled" type="datetime-local"
+              min="1900-01-01T00:00" max="<?= $maxDT ?>" required>
       </div>
 
       <div class="field">
         <label for="datetime_start">Data/hora de início</label>
-        <input id="datetime_start" name="datetime_start" type="datetime-local" required>
+        <input id="datetime_start" name="datetime_start" type="datetime-local"
+              min="1900-01-01T00:00" max="<?= $maxDT ?>" required>      
       </div>
 
       <div class="field">
         <label for="datetime_end">Data/hora de fim (opcional)</label>
-        <input id="datetime_end" name="datetime_end" type="datetime-local">
+        <input id="datetime_end" name="datetime_end" type="datetime-local"
+              min="1900-01-01T00:00" max="<?= $maxDT ?>">      
       </div>
 
       <!-- CONSULTATION -->

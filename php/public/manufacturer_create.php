@@ -19,6 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 
+  // Telefone opcional, mas se existir tem de ser telemóvel PT válido
+  if ($phone !== '' && !preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
+    header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=' . urlencode('Telefone inválido (telemóvel português, ex: 91xxxxxxx)'));
+    exit;
+  }
+
   // UNIQUE(name) (faz sentido para catálogo)
   foreach ($_SESSION['manufacturers'] as $m) {
     if (strtolower((string)$m['name']) === strtolower((string)$name)) {
@@ -70,7 +76,17 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="phone">Telefone</label>
-      <input id="phone" name="phone">
+      <input
+        id="phone"
+        name="phone"
+        type="tel"
+        inputmode="numeric"
+        autocomplete="tel"
+        pattern="^(91|92|93|96)[0-9]{7}$"
+        minlength="9"
+        maxlength="9"
+        title="Introduz um telemóvel português válido (91, 92, 93 ou 96)"
+      >
     </div>
 
     <div class="field">

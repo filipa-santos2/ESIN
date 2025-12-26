@@ -27,7 +27,7 @@ require_once __DIR__ . '/../../includes/header.php';
 </section>
 
 <section class="card">
-  <table>
+  <table class="table table-compact">
     <thead>
       <tr>
         <th>Código ICD-11</th>
@@ -40,9 +40,11 @@ require_once __DIR__ . '/../../includes/header.php';
         <tr>
           <td><?= htmlspecialchars($d['icd11_code']) ?></td>
           <td><?= htmlspecialchars($d['name']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($d['icd11_code']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/disease_delete.php?code=<?= urlencode($d['icd11_code']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($d['icd11_code']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/disease_delete.php?code=<?= urlencode($d['icd11_code']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

@@ -71,9 +71,11 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($p['type']) ?></td>
           <td><?= htmlspecialchars($p['concentration']) ?></td>
           <td><?= htmlspecialchars($p['unit']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$p['product_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$p['product_id']) ?>">Apagar</a>
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$p['product_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$p['product_id']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

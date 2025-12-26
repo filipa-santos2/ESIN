@@ -1,49 +1,78 @@
-*{margin:0;padding:0;box-sizing:border-box}
+*{ margin:0; padding:0; box-sizing:border-box; }
 
-html,body{
+html, body{
   height:100%;
-  font-family:var(--font);
+  font-family: var(--font);
   background:
     radial-gradient(900px 500px at 20% 0%, rgba(79,140,255,.16), transparent 60%),
     radial-gradient(800px 500px at 85% 10%, rgba(45,212,191,.10), transparent 55%),
     var(--bg);
-  color:var(--text);
+  color: var(--text);
+  line-height: 1.45;
 }
 
-a{color:var(--primary);text-decoration:none}
-a:hover{text-decoration:none;opacity:.92}
+/* Links */
+a{ color: var(--primary); text-decoration:none; }
+a:hover{ text-decoration:none; opacity:.92; }
+
+/* Tipografia */
+h1{ font-size:2.1rem; letter-spacing:-.02em; margin: 0 0 var(--s-2) 0; }
+h2{ font-size:1.5rem; letter-spacing:-.01em; margin: 0 0 var(--s-2) 0; }
+h3{ margin: 0 0 var(--s-2) 0; }
+
+p{
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 var(--s-2) 0;
+}
 
 .container{
   width:100%;
-  max-width:1100px;
+  max-width: 1400px;
   margin:0 auto;
-  padding:var(--s-5) var(--s-3);
+  padding: var(--s-5) var(--s-3);
 }
 
+
+/* Card base */
 .card{
   background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   border:1px solid var(--border);
-  border-radius:var(--r-2);
-  padding:var(--s-5);
-  box-shadow:var(--shadow);
+  border-radius: var(--r-2);
+  padding: var(--s-5);
+  box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
 }
 
-h1{font-size:2.1rem; letter-spacing:-.02em; margin-bottom:var(--s-2)}
-h2{font-size:1.5rem; letter-spacing:-.01em; margin-bottom:var(--s-2)}
-p{color:var(--muted); line-height:1.6}
+/* Layout base para footer ficar no fundo */
+body{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main{ display:block; }
+
+main.container{ flex: 1; }
+
+main.container{
+  background: transparent;
+}
+
 
 footer{
   text-align:center;
   padding:18px;
   background: var(--surface-2);
   border-top:1px solid var(--border);
-  color:var(--muted);
+  color: var(--muted);
 }
 
-body{ line-height: 1.45; }
+/* Cards largos para tabelas grandes (ex: planos AIT) */
+.card-wide{
+  max-width: 1300px;
+  margin-left: auto;
+  margin-right: auto;
+}
 
-h1,h2,h3{ margin: 0 0 var(--s-2) 0; }
-p{ margin: 0 0 var(--s-2) 0; }
 
-main{ display:block; }

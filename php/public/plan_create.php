@@ -9,26 +9,32 @@ if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
 if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
 
 function go_error(string $msg): void {
+  global $BASE_URL;
   header('Location: ' . $BASE_URL . '/plan_create.php?error=' . urlencode($msg));
   exit;
 }
 
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
-  $product_id = (int)($_POST['product_id'] ?? 0);
+  $product_id = trim((string)($_POST['product_id'] ?? ''));
   $start_date = trim($_POST['start_date'] ?? '');
   $end_date   = trim($_POST['end_date'] ?? '');
-  $status     = trim($_POST['status'] ?? '');
   $route      = trim($_POST['route'] ?? '');
-  $build_up_protocol = trim($_POST['build_up_protocol'] ?? '');
-  $maintenance_protocol = trim($_POST['maintenance_protocol'] ?? '');
+  $build_up_protocol     = trim($_POST['build_up_protocol'] ?? '');
+  $maintenance_protocol  = trim($_POST['maintenance_protocol'] ?? '');
+  $status     = trim($_POST['status'] ?? '');
   $notes      = trim($_POST['notes'] ?? '');
 
-  // obrigatórios
-  if ($patient_id <= 0 || $product_id <= 0 || $start_date === '' || $status === '' ||
-      $route === '' || $build_up_protocol === '' || $maintenance_protocol === '') {
+  if ($patient_id <= 0 || $product_id === '' || $start_date === '' || $route === '' || $build_up_protocol === '' || $maintenance_protocol === '' || $status === '') {
     go_error('Preenche todos os campos obrigatórios');
   }
+
 
   // enums do modelo
   $allowedStatus = ['not_started','build_up','maintenance','concluded','cancelled','lost_follow_up'];
@@ -41,11 +47,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!in_array($build_up_protocol, $allowedBuild, true)) go_error('Build-up protocol inválido');
   if (!in_array($maintenance_protocol, $allowedMaint, true)) go_error('Maintenance protocol inválido');
 
-  // regra do modelo: end_date NULL ou > start_date
-  if ($end_date !== '' && strcmp($end_date, $start_date) <= 0) {
-    go_error('End date tem de ser posterior a start date');
+
+  // Validar start_date (obrigatória)
+  if (!is_valid_ymd($start_date)) {
+    go_error('Start date inválida');
   }
+
+  // Validar end_date (opcional, mas se existir tem de ser válida e >= start_date)
+  if ($end_date !== '') {
+    if (!is_valid_ymd($end_date)) {
+      go_error('End date inválida');
+    }
+
+    $startObj = new DateTime($start_date);
+    $endObj   = new DateTime($end_date);
+
+    if ($endObj < $startObj) {
+      go_error('End date tem de ser igual ou posterior a start date');
+    }
+  }
+
   $end_date = ($end_date === '' ? null : $end_date);
+
 
   // validar paciente existe
   $patientExists = false;
@@ -54,14 +77,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   if (!$patientExists) go_error('Paciente inválido');
 
-  // validar produto existe
-  $productExists = false;
-  foreach ($_SESSION['products'] as $pr) {
-    // aceita tanto product_id como serial_number, para não partir se o teu array for diferente
-    if (isset($pr['product_id']) && (int)$pr['product_id'] === $product_id) { $productExists = true; break; }
-    if (isset($pr['serial_number']) && (string)$pr['serial_number'] === (string)$product_id) { $productExists = true; break; }
+// validar produto existe
+$productExists = false;
+foreach ($_SESSION['products'] as $pr) {
+  $pid = (string)($pr['product_id'] ?? '');
+  $sn  = (string)($pr['serial_number'] ?? '');
+
+  if ($product_id !== '' && ($product_id === $pid || $product_id === $sn)) {
+    $productExists = true;
+    break;
   }
-  if (!$productExists) go_error('Produto inválido');
+}
+if (!$productExists) go_error('Produto inválido');
+
 
   // gerar plan_id
   $maxId = 0;
@@ -93,10 +121,6 @@ require_once __DIR__ . '/../../includes/header.php';
 <section class="card">
   <h1>Adicionar plano AIT</h1>
 
-  <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
-  <?php endif; ?>
-
   <form method="POST" action="<?= $BASE_URL ?>/plan_create.php">
     <div class="field">
       <label for="patient_id">Paciente</label>
@@ -114,7 +138,6 @@ require_once __DIR__ . '/../../includes/header.php';
       <select id="product_id" name="product_id" required>
         <?php foreach ($_SESSION['products'] as $pr): ?>
 <?php
-require_once __DIR__ . '/../../includes/config.php';
             $id = $pr['product_id'] ?? $pr['serial_number'] ?? '';
             $label = '';
             if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
@@ -128,13 +151,19 @@ require_once __DIR__ . '/../../includes/config.php';
 
     <div class="field">
       <label for="start_date">Start date</label>
-      <input id="start_date" name="start_date" type="date" required>
+      <input id="start_date" name="start_date" type="date"
+            min="1900-01-01"
+            max="<?= date('Y-m-d') ?>"
+            required>
     </div>
 
     <div class="field">
       <label for="end_date">End date (opcional)</label>
-      <input id="end_date" name="end_date" type="date">
+      <input id="end_date" name="end_date" type="date"
+            min="1900-01-01"
+            max="<?= date('Y-m-d') ?>">
     </div>
+
 
     <div class="field">
       <label for="route">Route</label>

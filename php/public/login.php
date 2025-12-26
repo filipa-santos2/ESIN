@@ -9,7 +9,8 @@ require_once __DIR__ . '/../../includes/header.php'; ?>
     <label for="password">Senha:</label>
     <input type="password" id="password" name="password" required>
 
-    <button type="submit">Entrar</button>
+    <button type="submit" class="btn btn-primary">Entrar</button>
+
 </form>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

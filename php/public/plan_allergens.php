@@ -176,7 +176,7 @@ require_once __DIR__ . '/../../includes/header.php';
   <p><small>Plano ID: <?= htmlspecialchars((string)$planId) ?></small></p>
 
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <a class="btn" href="<?= $BASE_URL ?>/plans.php">Voltar aos planos</a>
+    <a class="btn btn-soft" href="<?= $BASE_URL ?>/plans.php">Voltar aos planos</a>
   </div>
 
   <?php if (!empty($_GET['error'])): ?>

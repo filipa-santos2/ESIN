@@ -39,7 +39,7 @@ require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<section class="card">
+<section class="card card-wide">
   <h1>Planos de Imunoterapia (AIT)</h1>
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
@@ -54,14 +54,17 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php endif; ?>
 </section>
 
-<section class="card">
-  <table>
+<section class="card card-wide">
+  <table class="table table-compact">
     <thead>
       <tr>
         <th>Paciente</th>
         <th>Produto</th>
         <th>Início</th>
         <th>Fim</th>
+        <th>Via</th>
+        <th>Indução</th>
+        <th>Manutenção</th>
         <th>Estado</th>
         <th>Ações</th>
       </tr>
@@ -70,17 +73,21 @@ require_once __DIR__ . '/../../includes/header.php';
       <?php foreach ($plans as $pl): ?>
         <tr>
           <td><?= htmlspecialchars($patientMap[(int)$pl['patient_id']] ?? '—') ?></td>
-          <td><?= htmlspecialchars($productMap[(string)$pl['product_id']] ?? '—') ?></td>
+          <td><?= htmlspecialchars($productMap[(string)$pl['product_id']] ?? (string)$pl['product_id']) ?></td>
           <td><?= htmlspecialchars((string)($pl['start_date'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['end_date'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['route'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['build_up_protocol'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['maintenance_protocol'] ?? '—')) ?></td>
           <td><?= htmlspecialchars((string)($pl['status'] ?? '—')) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/plan_delete.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Apagar</a>
-            <a class="btn" href="<?= $BASE_URL ?>/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
+
+          <td>
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/plan_view.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Ver</a>
+              <a class="btn btn-editar" href="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/plan_delete.php?id=<?= urlencode((string)$pl['aitplan_id']) ?>">Apagar</a>
+              <a class="btn btn-teal" href="<?= $BASE_URL ?>/plan_allergens.php?plan_id=<?= urlencode((string)$pl['aitplan_id']) ?>">Alergénios</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

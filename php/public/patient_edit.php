@@ -34,11 +34,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $phone      = trim($_POST['phone'] ?? '');
 
   $validSex = ['M', 'F', 'X'];
-  if ($full_name === '' || $birth_date === '' || !in_array($sex, $validSex, true)) {
-    header('Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome,+data+de+nascimento+e+sexo+v%C3%A1lido');
+
+  /* ---------- Validação do telefone (Portugal) ---------- */
+  if (!preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
+    header(
+      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
+      '&error=Telefone+inválido+(telemóvel+português,+ex:+91xxxxxxx)'
+    );
     exit;
   }
 
+
+  /* ---------- Validação da data de nascimento ---------- */
+  $dateObj = DateTime::createFromFormat('Y-m-d', $birth_date);
+  $today   = new DateTime();
+
+  if (
+    !$dateObj ||
+    $dateObj->format('Y-m-d') !== $birth_date ||
+    (int)$dateObj->format('Y') < 1900 ||
+    $dateObj > $today
+  ) {
+    header(
+      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
+      '&error=Data+de+nascimento+inválida'
+    );
+    exit;
+  }
+
+  /* ---------- Validação geral ---------- */
+  if ($full_name === '' || !in_array($sex, $validSex, true)) {
+    header(
+      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
+      '&error=Preenche+os+campos+obrigatórios+correctamente'
+    );
+    exit;
+  }
+
+  /* ---------- Guardar ---------- */
   $_SESSION['patients'][$index]['full_name']  = $full_name;
   $_SESSION['patients'][$index]['birth_date'] = $birth_date;
   $_SESSION['patients'][$index]['sex']        = $sex;
@@ -47,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   header('Location: ' . $BASE_URL . '/patients.php?success=Paciente+atualizado+com+sucesso');
   exit;
 }
+
 
 $patient = $_SESSION['patients'][$index];
 
@@ -70,7 +104,15 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="birth_date">Data de nascimento</label>
-      <input id="birth_date" name="birth_date" type="date" value="<?= htmlspecialchars($patient['birth_date']) ?>" required>
+      <input
+        type="date"
+        name="birth_date"
+        id="birth_date"
+        value="<?= htmlspecialchars($patient['birth_date'] ?? '') ?>"
+        min="1900-01-01"
+        max="<?= date('Y-m-d') ?>"
+        required
+      >
     </div>
 
     <div class="field">
@@ -84,7 +126,18 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="phone">Telefone</label>
-      <input id="phone" name="phone" value="<?= htmlspecialchars($patient['phone']) ?>">
+    <input
+      type="tel"
+      name="phone"
+      id="phone"
+      value="<?= htmlspecialchars($patient['phone'] ?? '') ?>"
+      pattern="^(91|92|93|96)[0-9]{7}$"
+      inputmode="numeric"
+      minlength="9"
+      maxlength="9"
+      required
+      title="Introduz um telemóvel português válido (91, 92, 93 ou 96)"
+    >
     </div>
 
     <div style="display:flex; gap:10px;">

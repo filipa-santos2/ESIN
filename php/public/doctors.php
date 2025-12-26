@@ -47,10 +47,18 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($d['license_no']) ?></td>
           <td><?= htmlspecialchars($d['specialty']) ?></td>
           <td><?= htmlspecialchars($d['phone']) ?></td>
-          <td><?= htmlspecialchars($d['email']) ?></td>
-          <td style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn" href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode($d['doctor_id']) ?>">Editar</a>
-            <a class="btn btn-danger" href="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode($d['doctor_id']) ?>">Apagar</a>
+          <td>
+            <?php
+              $email = htmlspecialchars($d['email'], ENT_QUOTES, 'UTF-8');
+              $email = str_replace(['@', '.'], ['<wbr>@', '<wbr>.'], $email);
+              echo $email;
+            ?>
+          </td>          
+          <td> 
+            <div class="actions">
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode($d['doctor_id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode($d['doctor_id']) ?>">Apagar</a>
+            </div>
           </td>
         </tr>
       <?php endforeach; ?>

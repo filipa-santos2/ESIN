@@ -11,6 +11,12 @@ function go_error(string $msg): void {
   exit;
 }
 
+function is_valid_ymd(string $date): bool {
+  $dt = DateTime::createFromFormat('Y-m-d', $date);
+  return $dt && $dt->format('Y-m-d') === $date;
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $patient_id = (int)($_POST['patient_id'] ?? 0);
   $who_iuis_code = trim($_POST['who_iuis_code'] ?? '');
@@ -26,6 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!in_array($test_result, $allowed, true)) {
     go_error('Resultado inválido');
   }
+
+  $test_date = trim($_POST['test_date'] ?? '');
+
+  if ($test_date === '') {
+    go_error('Data do teste é obrigatória');
+  }
+
+  if (!is_valid_ymd($test_date)) {
+    go_error('Data do teste inválida');
+  }
+
+  $testObj = new DateTime($test_date);
+  $today   = new DateTime('today');
+
+  if ($testObj > $today) {
+    go_error('Data do teste não pode ser futura');
+  }
+
 
   // validar paciente
   $patientExists = false;
@@ -100,7 +124,14 @@ require_once __DIR__ . '/../../includes/header.php';
 
       <div class="field">
         <label for="test_date">Data do teste</label>
-        <input id="test_date" name="test_date" type="date" required>
+        <input
+          id="test_date"
+          name="test_date"
+          type="date"
+          min="1900-01-01"
+          max="<?= date('Y-m-d') ?>"
+          required
+        >
       </div>
 
       <div class="field">
