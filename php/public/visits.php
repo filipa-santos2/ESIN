@@ -52,7 +52,8 @@ require_once __DIR__ . '/../../includes/header.php';
 </section>
 
 <section class="card">
-  <table class="table table-compact">
+ <div class="table-wrap">
+  <table class="table table-compact visits-table">
     <thead>
       <tr>
         <th>ID</th>
@@ -111,6 +112,7 @@ require_once __DIR__ . '/../../includes/header.php';
       <?php endif; ?>
     </tbody>
   </table>
+ </div>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

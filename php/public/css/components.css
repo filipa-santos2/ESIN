@@ -530,3 +530,63 @@ main.container > .card.card-wide{
 .visits-table td:last-child{
   width: auto;
 }
+/* ===== FIX VISITAS ===== */
+.table-visits td:nth-child(2),
+.table-visits td:nth-child(3),
+.table-visits td:nth-child(4),
+.table-visits td:nth-child(8){
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.table-visits th,
+.table-visits td{
+  vertical-align: top;
+}
+
+.table-visits td:last-child{
+  white-space: nowrap; /* só ações ficam “em linha” */
+}
+
+/* ===== VISITAS: não rebentar layout + detalhes legíveis ===== */
+.table-wrap{
+  width: 100%;
+  overflow-x: auto;              /* scroll horizontal só se precisar */
+  border-radius: var(--r-2);
+}
+
+/* garante que o arredondado “corta” o conteúdo */
+.table-wrap .table{
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+
+/* visitas: layout mais previsível */
+.table-visits{
+  table-layout: fixed;           /* impede colunas de empurrar tudo */
+  min-width: 980px;              /* evita esmagar demais em ecrãs pequenos */
+}
+
+/* por defeito, deixa quebrar texto nas visitas */
+.table-visits td{
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  vertical-align: top;
+}
+
+/* datas ficam “limpas” (não partem) */
+.table-visits td:nth-child(1),   /* ID */
+.table-visits td:nth-child(2),   /* Tipo */
+.table-visits td:nth-child(5),   /* Agendada */
+.table-visits td:nth-child(6),   /* Início */
+.table-visits td:nth-child(7){   /* Fim */
+  white-space: nowrap !important;
+}
+
+/* Detalhes: dá-lhe espaço e permite quebrar */
+.table-visits th:nth-child(8),
+.table-visits td:nth-child(8){
+  width: 36%;
+}
