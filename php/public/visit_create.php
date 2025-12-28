@@ -1,316 +1,186 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
-if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
-if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
-if (!isset($_SESSION['doctors'])) $_SESSION['doctors'] = [];
-if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
-if (!isset($_SESSION['consultations'])) $_SESSION['consultations'] = [];
-if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
-if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
-
-function redirect_with_error(string $msg): void {
-  global $BASE_URL;
-  header('Location: ' . $BASE_URL . '/visit_create.php?error=' . urlencode($msg));
+function dt_from_input(string $v): string {
+  return str_replace('T', ' ', trim($v));
+}
+function go_error(string $baseUrl, string $msg): void {
+  header('Location: ' . $baseUrl . '/visit_create.php?error=' . urlencode($msg));
   exit;
 }
 
-
-function is_valid_dtlocal(string $dt): bool {
-  // datetime-local normalmente vem como: 2025-12-26T14:30 (sem segundos)
-  $obj = DateTime::createFromFormat('Y-m-d\TH:i', $dt);
-  return $obj && $obj->format('Y-m-d\TH:i') === $dt;
+try {
+  $patients = $pdo->query('SELECT "id","nome_completo" FROM "Pacientes" ORDER BY "nome_completo"')->fetchAll();
+  $doctors  = $pdo->query('SELECT "id","nome_completo" FROM "Médicos" ORDER BY "nome_completo"')->fetchAll();
+  $products = $pdo->query('SELECT "id","nome" FROM "Produtos" ORDER BY "nome"')->fetchAll();
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/index.php?error=' . urlencode('Erro: ' . $e->getMessage()));
+  exit;
 }
-
-function dtlocal_to_obj(string $dt): DateTime {
-  // assume já validado
-  return DateTime::createFromFormat('Y-m-d\TH:i', $dt);
-}
-
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $visit_type = trim($_POST['visit_type'] ?? '');
-  $patient_id = (int)($_POST['patient_id'] ?? 0);
-  $doctor_id  = (int)($_POST['doctor_id'] ?? 0);
+  $tipo = trim($_POST['tipo'] ?? '');
+  $paciente_id = (int)($_POST['paciente_id'] ?? 0);
+  $medico_id   = (int)($_POST['médico_id'] ?? 0);
 
-  $dt_scheduled = trim($_POST['datetime_scheduled'] ?? '');
-  $dt_start     = trim($_POST['datetime_start'] ?? '');
-  $dt_end       = trim($_POST['datetime_end'] ?? ''); // pode vir vazio
+  $agendada = dt_from_input($_POST['data_hora_agendada'] ?? '');
+  $inicio   = dt_from_input($_POST['data_hora_início'] ?? '');
+  $fim_raw  = trim($_POST['data_hora_fim'] ?? '');
+  $fim      = ($fim_raw === '') ? null : dt_from_input($fim_raw);
 
-  // só obrigatório para administration
-  $product_id = (int)($_POST['product_id'] ?? 0);
+  if ($tipo !== 'consulta' && $tipo !== 'administração') go_error($BASE_URL, 'Tipo inválido');
+  if ($paciente_id <= 0 || $medico_id <= 0) go_error($BASE_URL, 'Seleciona paciente e médico');
+  if ($agendada === '' || $inicio === '') go_error($BASE_URL, 'Preenche data/hora agendada e início');
+  if ($fim !== null && strcmp($fim, $inicio) < 0) go_error($BASE_URL, 'Fim tem de ser >= início');
 
-  if ($visit_type !== 'consultation' && $visit_type !== 'administration') {
-    redirect_with_error('Tipo de visita inválido');
+  // Campos extra (Administração)
+  $produto_id = (int)($_POST['produto_id'] ?? 0);
+  $dose_no = (int)($_POST['dose_nº'] ?? -1);
+  $fase = trim($_POST['fase'] ?? '');
+  $local = trim($_POST['local_administração'] ?? '');
+  $dose_ml_raw = trim($_POST['dose_ml'] ?? '');
+  $min_obs = (int)($_POST['minutos_observação'] ?? 0);
+
+  $dose_ml = (float)str_replace(',', '.', $dose_ml_raw);
+
+  if ($tipo === 'administração') {
+    if ($produto_id <= 0) go_error($BASE_URL, 'Seleciona um produto');
+    if ($dose_no < 0) go_error($BASE_URL, 'Dose nº tem de ser >= 0');
+    if ($fase === '') go_error($BASE_URL, 'Preenche a fase');
+    if ($local === '') go_error($BASE_URL, 'Preenche o local de administração');
+    if (!($dose_ml > 0)) go_error($BASE_URL, 'Dose (mL) tem de ser > 0');
+    if ($min_obs <= 0) go_error($BASE_URL, 'Minutos de observação tem de ser > 0');
   }
 
-  if ($patient_id <= 0 || $doctor_id <= 0) {
-    redirect_with_error('Seleciona paciente e médico');
-  }
+  try {
+    $pdo->beginTransaction();
 
-  if (!is_valid_dtlocal($dt_scheduled)) {
-  redirect_with_error('Data/hora agendada inválida');
-  }
-  if (!is_valid_dtlocal($dt_start)) {
-    redirect_with_error('Data/hora de início inválida');
-  }
-  if ($dt_end !== '' && !is_valid_dtlocal($dt_end)) {
-    redirect_with_error('Data/hora de fim inválida');
-  }
+    $stmt = $pdo->prepare('
+      INSERT INTO "Visitas"
+        ("tipo","paciente_id","médico_id","data_hora_agendada","data_hora_início","data_hora_fim")
+      VALUES (?,?,?,?,?,?)
+    ');
+    $stmt->execute([$tipo, $paciente_id, $medico_id, $agendada, $inicio, $fim]);
 
-  $scheduledObj = dtlocal_to_obj($dt_scheduled);
-  $startObj     = dtlocal_to_obj($dt_start);
+    $visitId = (int)$pdo->lastInsertId();
 
-  // (opcional, mas faz sentido): agendada não pode ser depois do início
-  if ($scheduledObj > $startObj) {
-    redirect_with_error('A data/hora agendada tem de ser igual ou anterior ao início');
-  }
-
-  // end opcional: se existir, end >= start
-  if ($dt_end !== '') {
-    $endObj = dtlocal_to_obj($dt_end);
-    if ($endObj < $startObj) {
-      redirect_with_error('A data/hora de fim tem de ser igual ou posterior ao início');
-    }
-  }
-
-
-  // Validar existência FK
-  $patientExists = false;
-  foreach ($_SESSION['patients'] as $p) {
-    if ((int)$p['patient_id'] === $patient_id) { $patientExists = true; break; }
-  }
-  if (!$patientExists) redirect_with_error('Paciente inválido');
-
-  $doctorExists = false;
-  foreach ($_SESSION['doctors'] as $d) {
-    if ((int)$d['doctor_id'] === $doctor_id) { $doctorExists = true; break; }
-  }
-  if (!$doctorExists) redirect_with_error('Médico inválido');
-
-  // Se for administration: produto obrigatório + existe + regra das 5 utilizações
-  if ($visit_type === 'administration') {
-    if ($product_id <= 0) {
-      redirect_with_error('Escolhe um produto');
+    if ($tipo === 'administração') {
+      $stmt2 = $pdo->prepare('
+        INSERT INTO "Administração"
+          ("visita_id","produto_id","dose_nº","fase","local_administração","dose_ml","minutos_observação")
+        VALUES (?,?,?,?,?,?,?)
+      ');
+      $stmt2->execute([$visitId, $produto_id, $dose_no, $fase, $local, $dose_ml, $min_obs]);
     }
 
-    $productExists = false;
-    foreach ($_SESSION['products'] as $pr) {
-      if ((int)($pr['product_id'] ?? 0) === $product_id) { $productExists = true; break; }
-    }
-    if (!$productExists) {
-      redirect_with_error('Produto inválido');
-    }
+    $pdo->commit();
 
-    // Regra: máximo 5 administrações por produto
-    $count = 0;
-    foreach ($_SESSION['visits'] as $v) {
-      if (($v['visit_type'] ?? '') === 'administration' && (int)($v['product_id'] ?? 0) === $product_id) {
-        $count++;
-      }
-    }
-    if ($count >= 5) {
-      redirect_with_error('Este produto já foi usado em 5 administrações. Escolhe outro frasco.');
-    }
+    header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita criada com sucesso'));
+    exit;
+  } catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    go_error($BASE_URL, 'Erro ao criar visita: ' . $e->getMessage());
   }
-
-  // Gerar visit_id
-  $maxId = 0;
-  foreach ($_SESSION['visits'] as $v) $maxId = max($maxId, (int)$v['visit_id']);
-  $newId = $maxId + 1;
-
-  // Guardar Visit (superclasse)
-  $visitRow = [
-    'visit_id' => $newId,
-    'patient_id' => $patient_id,
-    'doctor_id' => $doctor_id,
-    'visit_type' => $visit_type,
-    'datetime_scheduled' => $dt_scheduled,
-    'datetime_start' => $dt_start,
-    'datetime_end' => ($dt_end === '' ? null : $dt_end),
-  ];
-
-  // adicionar product_id só em administration (modelo)
-  if ($visit_type === 'administration') {
-    $visitRow['product_id'] = $product_id;
-  }
-
-  $_SESSION['visits'][] = $visitRow;
-
-  // Guardar subclasse (disjoint, complete)
-  if ($visit_type === 'consultation') {
-    $subspecialty = trim($_POST['subspecialty'] ?? '');
-    if ($subspecialty === '') {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Preenche a subspecialidade');
-    }
-
-    $_SESSION['consultations'][] = [
-      'visit_id' => $newId,
-      'subspecialty' => $subspecialty,
-    ];
-  }
-
-  if ($visit_type === 'administration') {
-    $dose_no = (int)($_POST['dose_no'] ?? -1);
-    $phase = trim($_POST['phase'] ?? '');
-    $administration_site = trim($_POST['administration_site'] ?? '');
-    $dose_ml_raw = trim($_POST['dose_ml'] ?? '');
-    $observation_minutes = (int)($_POST['observation_minutes'] ?? 0);
-
-    $dose_ml = (float)str_replace(',', '.', $dose_ml_raw);
-
-    if ($dose_no < 0) {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Dose nº tem de ser >= 0');
-    }
-    if ($phase !== 'build_up' && $phase !== 'maintenance') {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Phase inválida');
-    }
-    if ($administration_site === '') {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Preenche o local de administração');
-    }
-    if (!($dose_ml > 0)) {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Dose (mL) tem de ser > 0');
-    }
-    if ($observation_minutes <= 0) {
-      array_pop($_SESSION['visits']);
-      redirect_with_error('Minutos de observação tem de ser > 0');
-    }
-
-    $_SESSION['administrations'][] = [
-      'visit_id' => $newId,
-      'dose_no' => $dose_no,
-      'phase' => $phase,
-      'administration_site' => $administration_site,
-      'dose_ml' => $dose_ml,
-      'observation_minutes' => $observation_minutes,
-      'product_id' => $product_id, // guarda também na subclasse para facilitar
-    ];
-  }
-
-  header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita criada com sucesso'));
-  exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
-  <h1>Adicionar visita</h1>
+  <h1>Criar visita</h1>
 
   <?php if (!empty($_GET['error'])): ?>
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <?php if (empty($_SESSION['patients']) || empty($_SESSION['doctors'])): ?>
-    <div class="msg msg-error">Não é possível criar visitas sem pacientes e médicos.</div>
-  <?php elseif (empty($_SESSION['products'])): ?>
-    <div class="msg msg-error">Não é possível criar administrações sem produtos. Cria um produto primeiro.</div>
+  <?php if (empty($patients) || empty($doctors)): ?>
+    <div class="msg msg-error">Precisas de pelo menos 1 paciente e 1 médico.</div>
   <?php else: ?>
-  <?php $maxDT = date('Y-m-d\TH:i'); ?>
     <form method="POST" action="<?= $BASE_URL ?>/visit_create.php">
       <div class="field">
-        <label for="visit_type">Tipo de visita</label>
-        <select id="visit_type" name="visit_type" required>
-          <option value="consultation">Consultation</option>
-          <option value="administration">Administration</option>
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" required>
+          <option value="consulta">consulta</option>
+          <option value="administração">administração</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="patient_id">Paciente</label>
-        <select id="patient_id" name="patient_id" required>
-          <?php foreach ($_SESSION['patients'] as $p): ?>
-            <option value="<?= htmlspecialchars((string)$p['patient_id']) ?>"><?= htmlspecialchars($p['full_name']) ?></option>
+        <label for="paciente_id">Paciente</label>
+        <select id="paciente_id" name="paciente_id" required>
+          <?php foreach ($patients as $p): ?>
+            <option value="<?= htmlspecialchars((string)$p['id']) ?>"><?= htmlspecialchars($p['nome_completo']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
 
       <div class="field">
-        <label for="doctor_id">Médico</label>
-        <select id="doctor_id" name="doctor_id" required>
-          <?php foreach ($_SESSION['doctors'] as $d): ?>
-            <option value="<?= htmlspecialchars((string)$d['doctor_id']) ?>"><?= htmlspecialchars($d['full_name']) ?></option>
+        <label for="médico_id">Médico</label>
+        <select id="médico_id" name="médico_id" required>
+          <?php foreach ($doctors as $d): ?>
+            <option value="<?= htmlspecialchars((string)$d['id']) ?>"><?= htmlspecialchars($d['nome_completo']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
 
       <div class="field">
-        <label for="datetime_scheduled">Data/hora agendada</label>
-        <input id="datetime_scheduled" name="datetime_scheduled" type="datetime-local"
-              min="1900-01-01T00:00" max="<?= $maxDT ?>" required>
+        <label for="data_hora_agendada">Data/hora agendada</label>
+        <input id="data_hora_agendada" name="data_hora_agendada" type="datetime-local" required>
       </div>
 
       <div class="field">
-        <label for="datetime_start">Data/hora de início</label>
-        <input id="datetime_start" name="datetime_start" type="datetime-local"
-              min="1900-01-01T00:00" max="<?= $maxDT ?>" required>      
+        <label for="data_hora_início">Data/hora de início</label>
+        <input id="data_hora_início" name="data_hora_início" type="datetime-local" required>
       </div>
 
       <div class="field">
-        <label for="datetime_end">Data/hora de fim (opcional)</label>
-        <input id="datetime_end" name="datetime_end" type="datetime-local"
-              min="1900-01-01T00:00" max="<?= $maxDT ?>">      
+        <label for="data_hora_fim">Data/hora de fim (opcional)</label>
+        <input id="data_hora_fim" name="data_hora_fim" type="datetime-local">
       </div>
 
-      <!-- CONSULTATION -->
-      <div id="section_consultation" class="card" style="margin-top:12px;">
-        <h2>Consultation</h2>
-        <div class="field">
-          <label for="subspecialty">Subspecialidade</label>
-          <input id="subspecialty" name="subspecialty" placeholder="Ex: Imunoalergologia">
-        </div>
-      </div>
+      <!-- ADMINISTRAÇÃO -->
+      <div id="sec_admin" class="card" style="margin-top:12px; display:none;">
+        <h2>Administração</h2>
 
-      <!-- ADMINISTRATION -->
-      <div id="section_administration" class="card" style="margin-top:12px; display:none;">
-        <h2>Administration</h2>
+        <?php if (empty($products)): ?>
+          <div class="msg msg-error">Não existem produtos. Cria um produto primeiro.</div>
+        <?php else: ?>
+          <div class="field">
+            <label for="produto_id">Produto</label>
+            <select id="produto_id" name="produto_id">
+              <?php foreach ($products as $pr): ?>
+                <option value="<?= htmlspecialchars((string)$pr['id']) ?>"><?= htmlspecialchars($pr['nome']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
 
-        <div class="field">
-          <label for="dose_no">Dose nº</label>
-          <input id="dose_no" name="dose_no" type="number" min="0" value="0">
-        </div>
+          <div class="field">
+            <label for="dose_nº">Dose nº</label>
+            <input id="dose_nº" name="dose_nº" type="number" min="0" value="0">
+          </div>
 
-        <div class="field">
-          <label for="phase">Phase</label>
-          <select id="phase" name="phase">
-            <option value="build_up">build_up</option>
-            <option value="maintenance">maintenance</option>
-          </select>
-        </div>
+          <div class="field">
+            <label for="fase">Fase</label>
+            <input id="fase" name="fase" placeholder="Ex: build_up / maintenance">
+          </div>
 
-        <div class="field">
-          <label for="administration_site">Local de administração</label>
-          <input id="administration_site" name="administration_site" placeholder="Ex: Braço esquerdo">
-        </div>
+          <div class="field">
+            <label for="local_administração">Local de administração</label>
+            <input id="local_administração" name="local_administração" placeholder="Ex: braço esquerdo">
+          </div>
 
-        <div class="field">
-          <label for="dose_ml">Dose (mL)</label>
-          <input id="dose_ml" name="dose_ml" type="number" step="0.01" min="0.01" placeholder="Ex: 0.20">
-        </div>
+          <div class="field">
+            <label for="dose_ml">Dose (mL)</label>
+            <input id="dose_ml" name="dose_ml" type="number" step="0.01" min="0.01" placeholder="Ex: 0.20">
+          </div>
 
-        <div class="field">
-          <label for="observation_minutes">Minutos de observação</label>
-          <input id="observation_minutes" name="observation_minutes" type="number" min="1" value="30">
-        </div>
-
-        <div class="field">
-          <label for="product_id">Produto (frasco)</label>
-          <select id="product_id" name="product_id">
-            <?php foreach ($_SESSION['products'] as $p): ?>
-              <option value="<?= htmlspecialchars((string)$p['product_id']) ?>">
-                <?= htmlspecialchars($p['name']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <small>Nota: um produto pode ser usado no máximo em 5 administrações.</small>
-        </div>
+          <div class="field">
+            <label for="minutos_observação">Minutos de observação</label>
+            <input id="minutos_observação" name="minutos_observação" type="number" min="1" value="30">
+          </div>
+        <?php endif; ?>
       </div>
 
       <div style="display:flex; gap:10px; margin-top:12px;">
@@ -320,23 +190,14 @@ require_once __DIR__ . '/../../includes/header.php';
     </form>
 
     <script>
-      const typeSelect = document.getElementById('visit_type');
-      const secC = document.getElementById('section_consultation');
-      const secA = document.getElementById('section_administration');
+      const tipo = document.getElementById('tipo');
+      const secAdmin = document.getElementById('sec_admin');
 
-      function toggleSections() {
-        const v = typeSelect.value;
-        if (v === 'consultation') {
-          secC.style.display = '';
-          secA.style.display = 'none';
-        } else {
-          secC.style.display = 'none';
-          secA.style.display = '';
-        }
+      function toggle() {
+        secAdmin.style.display = (tipo.value === 'administração') ? '' : 'none';
       }
-
-      typeSelect.addEventListener('change', toggleSections);
-      toggleSections();
+      tipo.addEventListener('change', toggle);
+      toggle();
     </script>
   <?php endif; ?>
 </section>

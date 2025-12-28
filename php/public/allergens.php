@@ -6,6 +6,14 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_login();
 
 require_once __DIR__ . '/../../includes/config.php';
+
+$CATEGORY_LABELS = [
+  'pollen' => 'Pólen',
+  'mite'   => 'Ácaros',
+  'dander' => 'Epitélio animal',
+];
+
+$CATEGORY_OPTIONS = ['pollen', 'mite', 'dander']; // ordem que queres no select
  
 $allergens = $pdo->query('
   SELECT
@@ -49,8 +57,9 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($a['espécie']) ?></td>
           <td><?= htmlspecialchars($a['nome_comum']) ?></td>
           <td><?= htmlspecialchars($a['nome_bioquímico'] ?? '—') ?></td>
-          <td><?= htmlspecialchars($a['categoria']) ?></td>
-          <td>
+              <? $cat = (string)($a['categoria'] ?? ''); ?>
+          <td><?= htmlspecialchars($CATEGORY_LABELS[$cat] ?? $cat) ?></td>
+           <td>
             <div class="actions">
               <a class="btn btn-soft"
                  href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['código_who_iuis']) ?>">Editar</a>

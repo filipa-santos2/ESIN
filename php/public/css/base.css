@@ -82,3 +82,58 @@ footer{
   border: 1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.03);
 }
+/* ===== VISITAS: tabela mais legível ===== */
+.table-visits {
+  width: 100%;
+  table-layout: fixed;      /* impede colunas de explodir */
+  border-collapse: collapse;
+}
+
+.table-visits th,
+.table-visits td {
+  vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* larguras (ajusta se quiseres) */
+.table-visits th:nth-child(1), .table-visits td:nth-child(1) { width: 52px; }   /* ID */
+.table-visits th:nth-child(2), .table-visits td:nth-child(2) { width: 140px; }  /* Tipo */
+.table-visits th:nth-child(3), .table-visits td:nth-child(3) { width: 160px; }  /* Paciente */
+.table-visits th:nth-child(4), .table-visits td:nth-child(4) { width: 160px; }  /* Médico */
+.table-visits th:nth-child(5), .table-visits td:nth-child(5) { width: 140px; }  /* Agendada */
+.table-visits th:nth-child(6), .table-visits td:nth-child(6) { width: 120px; }  /* Início */
+.table-visits th:nth-child(7), .table-visits td:nth-child(7) { width: 120px; }  /* Fim */
+.table-visits th:nth-child(8), .table-visits td:nth-child(8) { width: 260px; }  /* Detalhes */
+.table-visits th:nth-child(9), .table-visits td:nth-child(9) { width: 220px; }  /* Ações */
+
+/* Detalhes: caixa com scroll */
+.visit-details {
+  max-height: 120px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  line-height: 1.35;
+}
+
+/* Ações: arrumadas e compactas */
+.visit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.visit-actions .btn {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Em ecrãs pequenos: ações em coluna */
+@media (max-width: 900px) {
+  .table-visits { table-layout: auto; }
+  .visit-actions { grid-template-columns: 1fr; }
+  .table-visits th:nth-child(8), .table-visits td:nth-child(8) { width: auto; }
+}

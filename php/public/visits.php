@@ -1,80 +1,61 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
-if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
-if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
-if (!isset($_SESSION['doctors'])) $_SESSION['doctors'] = [];
-if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
-if (!isset($_SESSION['consultations'])) $_SESSION['consultations'] = [];
-if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
-if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
+try {
+  $stmt = $pdo->query('
+    SELECT
+      v."id",
+      v."tipo",
+      v."data_hora_agendada",
+      v."data_hora_início",
+      v."data_hora_fim",
+      p."nome_completo" AS paciente_nome,
+      m."nome_completo" AS medico_nome,
 
-// Maps
-$patientMap = [];
-foreach ($_SESSION['patients'] as $p) {
-  $patientMap[(int)$p['patient_id']] = (string)$p['full_name'];
+      a."produto_id",
+      a."dose_nº",
+      a."fase",
+      a."local_administração",
+      a."dose_ml",
+      a."minutos_observação",
+
+      pr."nome" AS produto_nome,
+
+      CASE WHEN ea."visita_id" IS NULL THEN 0 ELSE 1 END AS tem_evento_adverso
+
+    FROM "Visitas" v
+    LEFT JOIN "Pacientes" p ON p."id" = v."paciente_id"
+    LEFT JOIN "Médicos"   m ON m."id" = v."médico_id"
+    LEFT JOIN "Administração" a ON a."visita_id" = v."id"
+    LEFT JOIN "Produtos" pr ON pr."id" = a."produto_id"
+    LEFT JOIN "Evento adverso" ea ON ea."visita_id" = v."id"
+    ORDER BY v."id" DESC
+  ');
+  $visits = $stmt->fetchAll();
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/index.php?error=' . urlencode('Erro: ' . $e->getMessage()));
+  exit;
 }
 
-$doctorMap = [];
-foreach ($_SESSION['doctors'] as $d) {
-  $doctorMap[(int)$d['doctor_id']] = (string)$d['full_name'];
-}
-
-$productMap = [];
-foreach ($_SESSION['products'] as $p) {
-  $productMap[(int)$p['product_id']] = (string)$p['name'];
-}
-
-function fmt_dt_pt(?string $dt): string {
-  if (!$dt) return '—';
-  $obj = DateTime::createFromFormat('Y-m-d\TH:i', $dt);
-  if (!$obj) return htmlspecialchars($dt);
-  return $obj->format('d/m/Y H:i');
-}
-
-
-// Detalhes por visit_id
-$consultationByVisit = [];
-foreach ($_SESSION['consultations'] as $c) {
-  $consultationByVisit[(int)$c['visit_id']] = $c;
-}
-
-$adminByVisit = [];
-foreach ($_SESSION['administrations'] as $a) {
-  $adminByVisit[(int)$a['visit_id']] = $a;
-}
-
-$aeByVisit = [];
-foreach ($_SESSION['adverse_events'] as $ae) {
-  $aeByVisit[(int)$ae['visit_id']] = $ae;
-}
-
-$visits = $_SESSION['visits'];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<section class="card card-wide">
+<section class="card">
   <h1>Visitas</h1>
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-    <p style="margin:0;">Visitas (Visit) com especializações (Consultation / Administration).</p>
-    <a class="btn btn-primary" href="<?= $BASE_URL ?>/visit_create.php">Adicionar visita</a>
+    <p style="margin:0;">Lista de visitas (consulta / administração).</p>
+    <a class="btn btn-primary" href="<?= $BASE_URL ?>/visit_create.php">Criar visita</a>
   </div>
-
-  <?php if (empty($_SESSION['patients']) || empty($_SESSION['doctors'])): ?>
-    <div class="msg msg-error" style="margin-top:12px;">
-      Para criar uma visita precisas de pelo menos um paciente e um médico.
-    </div>
-  <?php endif; ?>
 </section>
 
-<section class="card card-wide">
-  <table>
+<section class="card">
+  <table class="table table-compact">
     <thead>
       <tr>
+        <th>ID</th>
         <th>Tipo</th>
         <th>Paciente</th>
         <th>Médico</th>
@@ -87,55 +68,47 @@ require_once __DIR__ . '/../../includes/header.php';
     </thead>
     <tbody>
       <?php foreach ($visits as $v): ?>
-<?php
-require_once __DIR__ . '/../../includes/config.php';
-          $vid = (int)$v['visit_id'];
-          $type = (string)$v['visit_type'];
-          $details = '—';
+        <?php
+          $detalhes = '—';
 
-          if ($type === 'consultation') {
-            $sub = $consultationByVisit[$vid]['subspecialty'] ?? '—';
-            $details = 'Subespecialidade: ' . $sub;
+          if (($v['tipo'] ?? '') === 'administração') {
+            $prod = $v['produto_nome'] ?? '—';
+            $detalhes = 'Produto: ' . $prod;
 
-          } elseif ($type === 'administration') {
-            $adm = $adminByVisit[$vid] ?? null;
-
-            // product_id pode estar na superclasse (visits) ou na subclasse (administrations)
-            $pid = (int)($v['product_id'] ?? ($adm['product_id'] ?? 0));
-            $prodName = $pid > 0 ? ($productMap[$pid] ?? '—') : '—';
-
-            if ($adm) {
-              $details = 'Produto: ' . $prodName;
-              $details .= ' | Dose ' . $adm['dose_no'];
-              $details .= ' | ' . $adm['phase'];
-              $details .= ' | ' . $adm['dose_ml'] . ' mL';
-              $details .= ' | ' . $adm['administration_site'];
-              $details .= ' | Obs: ' . $adm['observation_minutes'] . ' min';
-              $details .= isset($aeByVisit[$vid]) ? ' | EA: sim' : ' | EA: não';
-            } else {
-              $details = 'Produto: ' . $prodName;
-            }
+            $detalhes .= ' | Dose nº: ' . (string)($v['dose_nº'] ?? '—');
+            $detalhes .= ' | Fase: ' . (string)($v['fase'] ?? '—');
+            $detalhes .= ' | Dose: ' . (string)($v['dose_ml'] ?? '—') . ' mL';
+            $detalhes .= ' | Local: ' . (string)($v['local_administração'] ?? '—');
+            $detalhes .= ' | Obs: ' . (string)($v['minutos_observação'] ?? '—') . ' min';
+            $detalhes .= ' | EA: ' . ((int)($v['tem_evento_adverso'] ?? 0) === 1 ? 'sim' : 'não');
           }
         ?>
+
         <tr>
-          <td><?= htmlspecialchars($type) ?></td>
-          <td><?= htmlspecialchars($patientMap[(int)$v['patient_id']] ?? '—') ?></td>
-          <td><?= htmlspecialchars($doctorMap[(int)$v['doctor_id']] ?? '—') ?></td>
-          <td class="col-dt"><?= fmt_dt_pt($v['datetime_scheduled'] ?? '') ?></td>
-          <td class="col-dt"><?= fmt_dt_pt($v['datetime_start'] ?? '') ?></td>
-          <td class="col-dt"><?= fmt_dt_pt($v['datetime_end'] ?? null) ?></td>
-          <td><?= htmlspecialchars($details) ?></td>
+          <td><?= htmlspecialchars((string)$v['id']) ?></td>
+          <td><?= htmlspecialchars((string)$v['tipo']) ?></td>
+          <td><?= htmlspecialchars($v['paciente_nome'] ?? '—') ?></td>
+          <td><?= htmlspecialchars($v['medico_nome'] ?? '—') ?></td>
+          <td><?= htmlspecialchars((string)$v['data_hora_agendada']) ?></td>
+          <td><?= htmlspecialchars((string)$v['data_hora_início']) ?></td>
+          <td><?= htmlspecialchars(($v['data_hora_fim'] ?? '') ?: '—') ?></td>
+          <td><?= htmlspecialchars($detalhes) ?></td>
           <td>
             <div class="actions">
-              <?php if ($type === 'administration'): ?>
-                <a class="btn" href="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$vid) ?>">Evento adverso</a>
+              <?php if (($v['tipo'] ?? '') === 'administração'): ?>
+                <a class="btn btn-soft" href="<?= $BASE_URL ?>/adverse_event.php?visita_id=<?= urlencode((string)$v['id']) ?>">Evento adverso</a>
               <?php endif; ?>
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$vid) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/visit_delete.php?id=<?= urlencode((string)$vid) ?>">Apagar</a>
+
+              <a class="btn btn-soft" href="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$v['id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/visit_delete.php?id=<?= urlencode((string)$v['id']) ?>">Apagar</a>
             </div>
           </td>
         </tr>
       <?php endforeach; ?>
+
+      <?php if (empty($visits)): ?>
+        <tr><td colspan="9" style="opacity:.75;">Ainda não existem visitas.</td></tr>
+      <?php endif; ?>
     </tbody>
   </table>
 </section>

@@ -1,45 +1,38 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
-if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
-if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
-
-$visitId = (int)($_GET['visit_id'] ?? 0);
-if ($visitId <= 0) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visit inválida')); exit; }
-
-// confirmar que existe e que é administration
-$visit = null;
-foreach ($_SESSION['visits'] as $v) {
-  if ((int)$v['visit_id'] === $visitId) { $visit = $v; break; }
-}
-if (!$visit) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada')); exit; }
-if ((string)$visit['visit_type'] !== 'administration') {
-  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Evento adverso só existe para Administration'));
+function go_err(string $baseUrl, int $id, string $msg): void {
+  header('Location: ' . $baseUrl . '/adverse_event.php?visita_id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
-// confirmar que existe registo em administrations
-$adminExists = false;
-foreach ($_SESSION['administrations'] as $a) {
-  if ((int)$a['visit_id'] === $visitId) { $adminExists = true; break; }
-}
-if (!$adminExists) {
-  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Administration não encontrada para esta visita'));
+$visita_id = (int)($_GET['visita_id'] ?? 0);
+if ($visita_id <= 0) {
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-// encontrar AE existente (0..1)
-$aeIndex = null;
-for ($i = 0; $i < count($_SESSION['adverse_events']); $i++) {
-  if ((int)$_SESSION['adverse_events'][$i]['visit_id'] === $visitId) { $aeIndex = $i; break; }
-}
+try {
+  // só faz sentido se for administração
+  $st = $pdo->prepare('SELECT "id","tipo" FROM "Visitas" WHERE "id"=?');
+  $st->execute([$visita_id]);
+  $visit = $st->fetch();
+  if (!$visit) {
+    header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada'));
+    exit;
+  }
+  if (($visit['tipo'] ?? '') !== 'administração') {
+    header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Evento adverso só existe em visitas de administração'));
+    exit;
+  }
 
-function redirect_ae(int $visitId, string $msg, bool $success=false): void {
-  $key = $success ? 'success' : 'error';
-  header('Location: ' . $BASE_URL . '/adverse_event.php?visit_id=' . urlencode((string)$visitId) . '&' . $key . '=' . urlencode($msg));
+  $st2 = $pdo->prepare('SELECT * FROM "Evento adverso" WHERE "visita_id"=?');
+  $st2->execute([$visita_id]);
+  $ae = $st2->fetch();
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Erro: ' . $e->getMessage()));
   exit;
 }
 
@@ -47,91 +40,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = $_POST['action'] ?? 'save';
 
   if ($action === 'delete') {
-    if ($aeIndex !== null) {
-      array_splice($_SESSION['adverse_events'], $aeIndex, 1);
-      redirect_ae($visitId, 'Evento adverso removido com sucesso', true);
+    try {
+      $del = $pdo->prepare('DELETE FROM "Evento adverso" WHERE "visita_id"=?');
+      $del->execute([$visita_id]);
+      header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Evento adverso removido'));
+      exit;
+    } catch (Throwable $e) {
+      go_err($BASE_URL, $visita_id, 'Erro ao remover: ' . $e->getMessage());
     }
-    redirect_ae($visitId, 'Não existe evento adverso para remover');
   }
 
   // save
-  $type = trim($_POST['type'] ?? '');
-  $onset_minutes = (int)($_POST['onset_minutes'] ?? -1);
-  $outcome = trim($_POST['outcome'] ?? '');
+  $tipo = trim($_POST['tipo'] ?? '');
+  $inicio_min = (int)($_POST['início_minutos'] ?? -1);
+  $desfecho = trim($_POST['desfecho'] ?? '');
+  if ($desfecho === '') $desfecho = null;
 
-  if ($type === '' || $outcome === '' || $onset_minutes < 0) {
-    redirect_ae($visitId, 'Preenche type, onset_minutes (>=0) e outcome');
+  if ($tipo === '') go_err($BASE_URL, $visita_id, 'Preenche o tipo');
+  if ($inicio_min < 0) go_err($BASE_URL, $visita_id, 'Início (minutos) tem de ser >= 0');
+
+  try {
+    if ($ae) {
+      $up = $pdo->prepare('
+        UPDATE "Evento adverso"
+        SET "tipo"=?, "início_minutos"=?, "desfecho"=?
+        WHERE "visita_id"=?
+      ');
+      $up->execute([$tipo, $inicio_min, $desfecho, $visita_id]);
+    } else {
+      $ins = $pdo->prepare('
+        INSERT INTO "Evento adverso" ("visita_id","tipo","início_minutos","desfecho")
+        VALUES (?,?,?,?)
+      ');
+      $ins->execute([$visita_id, $tipo, $inicio_min, $desfecho]);
+    }
+
+    header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Evento adverso guardado'));
+    exit;
+  } catch (Throwable $e) {
+    go_err($BASE_URL, $visita_id, 'Erro ao guardar: ' . $e->getMessage());
   }
-
-  $record = [
-    'visit_id' => $visitId,
-    'type' => $type,
-    'onset_minutes' => $onset_minutes,
-    'outcome' => $outcome,
-  ];
-
-  if ($aeIndex === null) {
-    $_SESSION['adverse_events'][] = $record;
-  } else {
-    $_SESSION['adverse_events'][$aeIndex] = $record;
-  }
-
-  redirect_ae($visitId, 'Evento adverso guardado com sucesso', true);
 }
 
-$ae = ($aeIndex !== null) ? $_SESSION['adverse_events'][$aeIndex] : ['type'=>'', 'onset_minutes'=>'', 'outcome'=>''];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Evento adverso</h1>
-  <p><small>Visit ID (Administration): <?= htmlspecialchars((string)$visitId) ?></small></p>
-
-  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <a class="btn" href="<?= $BASE_URL ?>/visits.php">Voltar às visitas</a>
-    <a class="btn" href="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$visitId) ?>">Voltar à visita</a>
-  </div>
+  <p><small>Visita #<?= htmlspecialchars((string)$visita_id) ?> (administração)</small></p>
 
   <?php if (!empty($_GET['error'])): ?>
-    <div class="msg msg-error" style="margin-top:12px;"><?= htmlspecialchars($_GET['error']) ?></div>
+    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <?php if (!empty($_GET['success'])): ?>
-    <div class="msg msg-success" style="margin-top:12px;"><?= htmlspecialchars($_GET['success']) ?></div>
-  <?php endif; ?>
-</section>
-
-<section class="card">
-  <h2><?= ($aeIndex === null) ? 'Criar' : 'Editar' ?> evento adverso</h2>
-
-  <form method="POST" action="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/adverse_event.php?visita_id=<?= urlencode((string)$visita_id) ?>">
     <input type="hidden" name="action" value="save">
 
     <div class="field">
-      <label for="type">Type</label>
-      <input id="type" name="type" value="<?= htmlspecialchars((string)$ae['type']) ?>" required>
+      <label for="tipo">Tipo</label>
+      <input id="tipo" name="tipo" value="<?= htmlspecialchars($ae['tipo'] ?? '') ?>" required>
     </div>
 
     <div class="field">
-      <label for="onset_minutes">Onset (minutos)</label>
-      <input id="onset_minutes" name="onset_minutes" type="number" min="0" value="<?= htmlspecialchars((string)$ae['onset_minutes']) ?>" required>
+      <label for="início_minutos">Início (minutos)</label>
+      <input id="início_minutos" name="início_minutos" type="number" min="0"
+             value="<?= htmlspecialchars((string)($ae['início_minutos'] ?? 0)) ?>" required>
     </div>
 
     <div class="field">
-      <label for="outcome">Outcome</label>
-      <input id="outcome" name="outcome" value="<?= htmlspecialchars((string)$ae['outcome']) ?>" required>
+      <label for="desfecho">Desfecho (opcional)</label>
+      <input id="desfecho" name="desfecho" value="<?= htmlspecialchars($ae['desfecho'] ?? '') ?>">
     </div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn" href="<?= $BASE_URL ?>/visits.php">Voltar</a>
 
-      <?php if ($aeIndex !== null): ?>
-        <form method="POST" action="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$visitId) ?>" style="margin:0;">
-          <input type="hidden" name="action" value="delete">
-          <button class="btn btn-danger" type="submit">Remover evento</button>
-        </form>
+      <?php if ($ae): ?>
+        <button class="btn btn-danger" type="submit" name="action" value="delete"
+                onclick="return confirm('Remover evento adverso desta visita?');">
+          Remover
+        </button>
       <?php endif; ?>
     </div>
   </form>

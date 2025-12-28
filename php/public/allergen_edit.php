@@ -7,6 +7,14 @@ require_admin();
 
 require_once __DIR__ . '/../../includes/config.php';
 
+$CATEGORY_LABELS = [
+  'mite'   => 'Ácaros',
+  'pollen' => 'Pólen',
+  'dander' => 'Epitélio animal',
+];
+
+$ALLOWED_CATEGORIES = array_keys($CATEGORY_LABELS); // ['mite','pollen','dander']
+
 
 $code = trim($_GET['code'] ?? '');
 if ($code === '') {
@@ -19,8 +27,6 @@ function go_error(string $code, string $msg): void {
   header('Location: ' . $BASE_URL . '/allergen_edit.php?code=' . urlencode($code) . '&error=' . urlencode($msg));
   exit;
 }
-
-$CATEGORIES = ['mite', 'pollen', 'dander'];
 
 // buscar existente
 $stmt = $pdo->prepare('
@@ -45,9 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($species === '' || $common === '' || $category === '') {
     go_error($code, 'Preenche os campos obrigatórios.');
   }
-  if (!in_array($category, $CATEGORIES, true)) {
-    go_error($code, 'Categoria inválida.');
+  $categoria = trim($_POST['categoria'] ?? '');
+
+  if (!in_array($categoria, $ALLOWED_CATEGORIES, true)) {
+  header('Location: ' . $BASE_URL . '/allergen_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode('Categoria inválida'));
+  exit;
   }
+
 
   $upd = $pdo->prepare('
     UPDATE "Alergénios"
@@ -104,12 +114,10 @@ require_once __DIR__ . '/../../includes/header.php';
     <div class="field">
       <label for="categoria">Categoria</label>
       <select id="categoria" name="categoria" required>
-          <option value="mite">ácaros</option>
-          <option value="pollen">pólen</option>
-          <option value="dander">epitélio animal</option>
-        <?php foreach ($CATEGORIES as $c): ?>
-          <option value="<?= htmlspecialchars($c) ?>" <?= ($allergen['categoria'] === $c) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($c) ?>
+        <?php foreach ($CATEGORY_LABELS as $value => $label): ?>
+          <option value="<?= htmlspecialchars($value) ?>"
+            <?= (($allergen['categoria'] ?? '') === $value) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($label) ?>
           </option>
         <?php endforeach; ?>
       </select>

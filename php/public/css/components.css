@@ -469,3 +469,64 @@ main.container > .card.card-wide{
   max-width: 1300px;
 }
 
+/* ================= VISITAS (fix layout) ================= */
+
+/* Dá comportamento de layout mais estável às tabelas “largas” (como Visitas) */
+.table,
+.card table{
+  table-layout: fixed; /* evita colunas “explodirem” com texto longo */
+}
+
+/* Ajuste específico para a tabela de Visitas:
+   - encolhe “Detalhes”
+   - garante colunas pequenas (ID, Tipo, datas)
+*/
+.table td:nth-child(1), .table th:nth-child(1){ width: 70px; }   /* ID */
+.table td:nth-child(2), .table th:nth-child(2){ width: 140px; }  /* Tipo */
+.table td:nth-child(3), .table th:nth-child(3){ width: 160px; }  /* Paciente */
+.table td:nth-child(4), .table th:nth-child(4){ width: 160px; }  /* Médico */
+.table td:nth-child(5), .table th:nth-child(5){ width: 150px; }  /* Ag
+
+/* ================= VISITAS (override isolado) ================= */
+
+.visits-table{
+  table-layout: fixed;
+}
+
+.visits-table th:nth-child(1), .visits-table td:nth-child(1){ width: 70px; }
+.visits-table th:nth-child(2), .visits-table td:nth-child(2){ width: 170px; }
+.visits-table th:nth-child(3), .visits-table td:nth-child(3){ width: 170px; }
+.visits-table th:nth-child(4), .visits-table td:nth-child(4){ width: 170px; }
+.visits-table th:nth-child(5), .visits-table td:nth-child(5){ width: 170px; }
+.visits-table th:nth-child(6), .visits-table td:nth-child(6){ width: 140px; }
+.visits-table th:nth-child(7), .visits-table td:nth-child(7){ width: 140px; }
+
+.visits-table th:nth-child(8), .visits-table td:nth-child(8){
+  width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.visits-table th:nth-child(9), .visits-table td:nth-child(9){
+  width: 260px;
+  white-space: nowrap;
+}
+
+.visits-table td:nth-child(5),
+.visits-table td:nth-child(6),
+.visits-table td:nth-child(7){
+  white-space: nowrap;
+}
+
+.visits-table td:nth-child(2),
+.visits-table td:nth-child(3),
+.visits-table td:nth-child(4){
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visits-table th:last-child,
+.visits-table td:last-child{
+  width: auto;
+}

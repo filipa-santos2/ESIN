@@ -1,309 +1,246 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
-if (!isset($_SESSION['visits'])) $_SESSION['visits'] = [];
-if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
-if (!isset($_SESSION['doctors'])) $_SESSION['doctors'] = [];
-if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
-if (!isset($_SESSION['consultations'])) $_SESSION['consultations'] = [];
-if (!isset($_SESSION['administrations'])) $_SESSION['administrations'] = [];
-if (!isset($_SESSION['adverse_events'])) $_SESSION['adverse_events'] = [];
+function to_input_dt(?string $db): string {
+  if (!$db) return '';
+  return str_replace(' ', 'T', $db);
+}
+function dt_from_input(string $v): string {
+  return str_replace('T', ' ', trim($v));
+}
+function go_error(string $baseUrl, int $id, string $msg): void {
+  header('Location: ' . $baseUrl . '/visit_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  exit;
+}
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('ID inválido')); exit; }
-
-$visitIndex = null;
-for ($i = 0; $i < count($_SESSION['visits']); $i++) {
-  if ((int)$_SESSION['visits'][$i]['visit_id'] === $id) { $visitIndex = $i; break; }
-}
-if ($visitIndex === null) { header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada')); exit; }
-
-$visit = $_SESSION['visits'][$visitIndex];
-$type = (string)$visit['visit_type'];
-
-function redirect_edit_error(int $id, string $msg): void {
-  global $BASE_URL;
-  header('Location: ' . $BASE_URL . '/visit_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+if ($id <= 0) {
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
+try {
+  $patients = $pdo->query('SELECT "id","nome_completo" FROM "Pacientes" ORDER BY "nome_completo"')->fetchAll();
+  $doctors  = $pdo->query('SELECT "id","nome_completo" FROM "Médicos" ORDER BY "nome_completo"')->fetchAll();
+  $products = $pdo->query('SELECT "id","nome" FROM "Produtos" ORDER BY "nome"')->fetchAll();
 
-function find_child_index(array $arr, int $visitId): ?int {
-  for ($i = 0; $i < count($arr); $i++) {
-    if ((int)$arr[$i]['visit_id'] === $visitId) return $i;
+  $stmt = $pdo->prepare('SELECT * FROM "Visitas" WHERE "id" = ?');
+  $stmt->execute([$id]);
+  $visit = $stmt->fetch();
+  if (!$visit) {
+    header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Visita não encontrada'));
+    exit;
   }
-  return null;
+
+  $admin = null;
+  if (($visit['tipo'] ?? '') === 'administração') {
+    $st2 = $pdo->prepare('SELECT * FROM "Administração" WHERE "visita_id" = ?');
+    $st2->execute([$id]);
+    $admin = $st2->fetch();
+  }
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/visits.php?error=' . urlencode('Erro: ' . $e->getMessage()));
+  exit;
 }
-
-$consultIdx = find_child_index($_SESSION['consultations'], $id);
-$adminIdx   = find_child_index($_SESSION['administrations'], $id);
-
-function is_valid_dtlocal(string $dt): bool {
-  $obj = DateTime::createFromFormat('Y-m-d\TH:i', $dt);
-  return $obj && $obj->format('Y-m-d\TH:i') === $dt;
-}
-
-function dtlocal_to_obj(string $dt): DateTime {
-  return DateTime::createFromFormat('Y-m-d\TH:i', $dt);
-}
-
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $patient_id = (int)($_POST['patient_id'] ?? 0);
-  $doctor_id  = (int)($_POST['doctor_id'] ?? 0);
+  // NOTA: tipo não muda aqui (para não dar chatices com subclasse)
+  $paciente_id = (int)($_POST['paciente_id'] ?? 0);
+  $medico_id   = (int)($_POST['médico_id'] ?? 0);
 
-  $dt_scheduled = trim($_POST['datetime_scheduled'] ?? '');
-  $dt_start     = trim($_POST['datetime_start'] ?? '');
-  $dt_end       = trim($_POST['datetime_end'] ?? '');
+  $agendada = dt_from_input($_POST['data_hora_agendada'] ?? '');
+  $inicio   = dt_from_input($_POST['data_hora_início'] ?? '');
+  $fim_raw  = trim($_POST['data_hora_fim'] ?? '');
+  $fim      = ($fim_raw === '') ? null : dt_from_input($fim_raw);
 
-  if ($patient_id <= 0 || $doctor_id <= 0) redirect_edit_error($id, 'Seleciona paciente e médico');
-  if ($dt_scheduled === '' || $dt_start === '') redirect_edit_error($id, 'Preenche data/hora agendada e início');
+  if ($paciente_id <= 0 || $medico_id <= 0) go_error($BASE_URL, $id, 'Seleciona paciente e médico');
+  if ($agendada === '' || $inicio === '') go_error($BASE_URL, $id, 'Preenche data/hora agendada e início');
+  if ($fim !== null && strcmp($fim, $inicio) < 0) go_error($BASE_URL, $id, 'Fim tem de ser >= início');
 
-  if (!is_valid_dtlocal($dt_scheduled)) redirect_edit_error($id, 'Data/hora agendada inválida');
-  if (!is_valid_dtlocal($dt_start)) redirect_edit_error($id, 'Data/hora de início inválida');
-  if ($dt_end !== '' && !is_valid_dtlocal($dt_end)) redirect_edit_error($id, 'Data/hora de fim inválida');
+  // Administração (se aplicável)
+  $produto_id = (int)($_POST['produto_id'] ?? 0);
+  $dose_no = (int)($_POST['dose_nº'] ?? -1);
+  $fase = trim($_POST['fase'] ?? '');
+  $local = trim($_POST['local_administração'] ?? '');
+  $dose_ml_raw = trim($_POST['dose_ml'] ?? '');
+  $min_obs = (int)($_POST['minutos_observação'] ?? 0);
 
-  $scheduledObj = dtlocal_to_obj($dt_scheduled);
-  $startObj     = dtlocal_to_obj($dt_start);
+  $dose_ml = (float)str_replace(',', '.', $dose_ml_raw);
 
-  if ($scheduledObj > $startObj) {
-    redirect_edit_error($id, 'A data/hora agendada tem de ser igual ou anterior ao início');
+  $isAdmin = (($visit['tipo'] ?? '') === 'administração');
+  if ($isAdmin) {
+    if ($produto_id <= 0) go_error($BASE_URL, $id, 'Seleciona um produto');
+    if ($dose_no < 0) go_error($BASE_URL, $id, 'Dose nº tem de ser >= 0');
+    if ($fase === '') go_error($BASE_URL, $id, 'Preenche a fase');
+    if ($local === '') go_error($BASE_URL, $id, 'Preenche o local de administração');
+    if (!($dose_ml > 0)) go_error($BASE_URL, $id, 'Dose (mL) tem de ser > 0');
+    if ($min_obs <= 0) go_error($BASE_URL, $id, 'Minutos de observação tem de ser > 0');
   }
 
-  if ($dt_end !== '') {
-    $endObj = dtlocal_to_obj($dt_end);
-    if ($endObj < $startObj) {
-      redirect_edit_error($id, 'A data/hora de fim tem de ser igual ou posterior ao início');
-    }
-  }
+  try {
+    $pdo->beginTransaction();
 
+    $upd = $pdo->prepare('
+      UPDATE "Visitas"
+      SET "paciente_id"=?, "médico_id"=?, "data_hora_agendada"=?, "data_hora_início"=?, "data_hora_fim"=?
+      WHERE "id"=?
+    ');
+    $upd->execute([$paciente_id, $medico_id, $agendada, $inicio, $fim, $id]);
 
-  // atualizar superclasse
-  $_SESSION['visits'][$visitIndex]['patient_id'] = $patient_id;
-  $_SESSION['visits'][$visitIndex]['doctor_id'] = $doctor_id;
-  $_SESSION['visits'][$visitIndex]['datetime_scheduled'] = $dt_scheduled;
-  $_SESSION['visits'][$visitIndex]['datetime_start'] = $dt_start;
-  $_SESSION['visits'][$visitIndex]['datetime_end'] = ($dt_end === '' ? null : $dt_end);
+    if ($isAdmin) {
+      // existe linha na subclasse?
+      $exists = $pdo->prepare('SELECT 1 FROM "Administração" WHERE "visita_id"=?');
+      $exists->execute([$id]);
+      $has = (bool)$exists->fetchColumn();
 
-  if ($type === 'consultation') {
-    $subspecialty = trim($_POST['subspecialty'] ?? '');
-    if ($subspecialty === '') redirect_edit_error($id, 'Preenche a subspecialidade');
-
-    if ($consultIdx === null) {
-      $_SESSION['consultations'][] = ['visit_id' => $id, 'subspecialty' => $subspecialty];
-    } else {
-      $_SESSION['consultations'][$consultIdx]['subspecialty'] = $subspecialty;
-    }
-  }
-
-  if ($type === 'administration') {
-    $product_id = (int)($_POST['product_id'] ?? 0);
-    $dose_no = (int)($_POST['dose_no'] ?? -1);
-    $phase = trim($_POST['phase'] ?? '');
-    $administration_site = trim($_POST['administration_site'] ?? '');
-    $dose_ml_raw = trim($_POST['dose_ml'] ?? '');
-    $observation_minutes = (int)($_POST['observation_minutes'] ?? 0);
-
-    $dose_ml = (float)str_replace(',', '.', $dose_ml_raw);
-
-    if ($product_id <= 0) redirect_edit_error($id, 'Escolhe um produto');
-
-    // validar produto existe
-    $productExists = false;
-    foreach ($_SESSION['products'] as $pr) {
-      if ((int)($pr['product_id'] ?? 0) === $product_id) { $productExists = true; break; }
-    }
-    if (!$productExists) redirect_edit_error($id, 'Produto inválido');
-
-    // regra: máximo 5 administrações por produto (exclui esta própria visit)
-    $count = 0;
-    foreach ($_SESSION['visits'] as $v) {
-      if (
-        (int)$v['visit_id'] !== $id &&
-        ($v['visit_type'] ?? '') === 'administration' &&
-        (int)($v['product_id'] ?? 0) === $product_id
-      ) {
-        $count++;
+      if ($has) {
+        $u2 = $pdo->prepare('
+          UPDATE "Administração"
+          SET "produto_id"=?, "dose_nº"=?, "fase"=?, "local_administração"=?, "dose_ml"=?, "minutos_observação"=?
+          WHERE "visita_id"=?
+        ');
+        $u2->execute([$produto_id, $dose_no, $fase, $local, $dose_ml, $min_obs, $id]);
+      } else {
+        $i2 = $pdo->prepare('
+          INSERT INTO "Administração"
+            ("visita_id","produto_id","dose_nº","fase","local_administração","dose_ml","minutos_observação")
+          VALUES (?,?,?,?,?,?,?)
+        ');
+        $i2->execute([$id, $produto_id, $dose_no, $fase, $local, $dose_ml, $min_obs]);
       }
     }
-    if ($count >= 5) {
-      redirect_edit_error($id, 'Este produto já foi usado em 5 administrações. Escolhe outro frasco.');
-    }
 
-    if ($dose_no < 0) redirect_edit_error($id, 'Dose nº tem de ser >= 0');
-    if ($phase !== 'build_up' && $phase !== 'maintenance') redirect_edit_error($id, 'Phase inválida');
-    if ($administration_site === '') redirect_edit_error($id, 'Preenche o local de administração');
-    if (!($dose_ml > 0)) redirect_edit_error($id, 'Dose (mL) tem de ser > 0');
-    if ($observation_minutes <= 0) redirect_edit_error($id, 'Minutos de observação tem de ser > 0');
+    $pdo->commit();
 
-    // guardar product_id na superclasse
-    $_SESSION['visits'][$visitIndex]['product_id'] = $product_id;
-
-    // atualizar subclasse
-    if ($adminIdx === null) {
-      $_SESSION['administrations'][] = [
-        'visit_id' => $id,
-        'product_id' => $product_id,
-        'dose_no' => $dose_no,
-        'phase' => $phase,
-        'administration_site' => $administration_site,
-        'dose_ml' => $dose_ml,
-        'observation_minutes' => $observation_minutes,
-      ];
-    } else {
-      $_SESSION['administrations'][$adminIdx]['product_id'] = $product_id;
-      $_SESSION['administrations'][$adminIdx]['dose_no'] = $dose_no;
-      $_SESSION['administrations'][$adminIdx]['phase'] = $phase;
-      $_SESSION['administrations'][$adminIdx]['administration_site'] = $administration_site;
-      $_SESSION['administrations'][$adminIdx]['dose_ml'] = $dose_ml;
-      $_SESSION['administrations'][$adminIdx]['observation_minutes'] = $observation_minutes;
-    }
+    header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita atualizada com sucesso'));
+    exit;
+  } catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    go_error($BASE_URL, $id, 'Erro ao atualizar visita: ' . $e->getMessage());
   }
-
-  header('Location: ' . $BASE_URL . '/visits.php?success=' . urlencode('Visita atualizada com sucesso'));
-  exit;
 }
 
-// valores da subclasse para preencher
-$consult = ($consultIdx !== null) ? $_SESSION['consultations'][$consultIdx] : ['subspecialty' => ''];
-
-$adminDefaultProduct = (int)($visit['product_id'] ?? 0);
-if ($adminDefaultProduct === 0 && $adminIdx !== null) {
-  $adminDefaultProduct = (int)($_SESSION['administrations'][$adminIdx]['product_id'] ?? 0);
-}
-
-$admin = ($adminIdx !== null) ? $_SESSION['administrations'][$adminIdx] : [
-  'product_id' => $adminDefaultProduct,
-  'dose_no' => 0,
-  'phase' => 'build_up',
-  'administration_site' => '',
-  'dose_ml' => 0.1,
-  'observation_minutes' => 30
-];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Editar visita</h1>
-  <p><small>Tipo: <?= htmlspecialchars($type) ?> | Visit ID: <?= htmlspecialchars((string)$id) ?></small></p>
+  <p><small>ID: <?= htmlspecialchars((string)$id) ?> | Tipo: <?= htmlspecialchars((string)$visit['tipo']) ?></small></p>
 
   <?php if (!empty($_GET['error'])): ?>
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
-  
-  <?php $maxDT = date('Y-m-d\TH:i'); ?>
-  
+
   <form method="POST" action="<?= $BASE_URL ?>/visit_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
-      <label for="patient_id">Paciente</label>
-      <select id="patient_id" name="patient_id" required>
-        <?php foreach ($_SESSION['patients'] as $p): ?>
-          <option value="<?= htmlspecialchars((string)$p['patient_id']) ?>"
-            <?= ((int)$p['patient_id'] === (int)$visit['patient_id']) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($p['full_name']) ?>
+      <label>Tipo</label>
+      <div class="input-like"><?= htmlspecialchars((string)$visit['tipo']) ?></div>
+    </div>
+
+    <div class="field">
+      <label for="paciente_id">Paciente</label>
+      <select id="paciente_id" name="paciente_id" required>
+        <?php foreach ($patients as $p): ?>
+          <option value="<?= htmlspecialchars((string)$p['id']) ?>"
+            <?= ((int)$p['id'] === (int)$visit['paciente_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($p['nome_completo']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="field">
-      <label for="doctor_id">Médico</label>
-      <select id="doctor_id" name="doctor_id" required>
-        <?php foreach ($_SESSION['doctors'] as $d): ?>
-          <option value="<?= htmlspecialchars((string)$d['doctor_id']) ?>"
-            <?= ((int)$d['doctor_id'] === (int)$visit['doctor_id']) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($d['full_name']) ?>
+      <label for="médico_id">Médico</label>
+      <select id="médico_id" name="médico_id" required>
+        <?php foreach ($doctors as $d): ?>
+          <option value="<?= htmlspecialchars((string)$d['id']) ?>"
+            <?= ((int)$d['id'] === (int)$visit['médico_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($d['nome_completo']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="field">
-      <label for="datetime_scheduled">Data/hora agendada</label>
-      <input id="datetime_scheduled" name="datetime_scheduled" type="datetime-local"
-       min="1900-01-01T00:00" max="<?= $maxDT ?>"
-       value="<?= htmlspecialchars((string)$visit['datetime_scheduled']) ?>" required>
+      <label for="data_hora_agendada">Data/hora agendada</label>
+      <input id="data_hora_agendada" name="data_hora_agendada" type="datetime-local"
+             value="<?= htmlspecialchars(to_input_dt($visit['data_hora_agendada'])) ?>" required>
     </div>
 
     <div class="field">
-      <label for="datetime_start">Data/hora de início</label>
-      <input id="datetime_start" name="datetime_start" type="datetime-local"
-       min="1900-01-01T00:00" max="<?= $maxDT ?>"
-       value="<?= htmlspecialchars((string)$visit['datetime_start']) ?>" required>
+      <label for="data_hora_início">Data/hora de início</label>
+      <input id="data_hora_início" name="data_hora_início" type="datetime-local"
+             value="<?= htmlspecialchars(to_input_dt($visit['data_hora_início'])) ?>" required>
     </div>
 
     <div class="field">
-      <label for="datetime_end">Data/hora de fim (opcional)</label>
-      <input id="datetime_end" name="datetime_end" type="datetime-local"
-       min="1900-01-01T00:00" max="<?= $maxDT ?>"
-       value="<?= htmlspecialchars((string)($visit['datetime_end'] ?? '')) ?>">
+      <label for="data_hora_fim">Data/hora de fim (opcional)</label>
+      <input id="data_hora_fim" name="data_hora_fim" type="datetime-local"
+             value="<?= htmlspecialchars(to_input_dt($visit['data_hora_fim'] ?? null)) ?>">
     </div>
 
-    <?php if ($type === 'consultation'): ?>
+    <?php if (($visit['tipo'] ?? '') === 'administração'): ?>
+      <?php
+        $admin = $admin ?: [
+          'produto_id' => 0,
+          'dose_nº' => 0,
+          'fase' => '',
+          'local_administração' => '',
+          'dose_ml' => '',
+          'minutos_observação' => 30,
+        ];
+      ?>
+
       <div class="card" style="margin-top:12px;">
-        <h2>Consultation</h2>
-        <div class="field">
-          <label for="subspecialty">Subspecialidade</label>
-          <input id="subspecialty" name="subspecialty"
-                 value="<?= htmlspecialchars((string)($consult['subspecialty'] ?? '')) ?>" required>
-        </div>
-      </div>
-    <?php endif; ?>
-    
-    <?php if ($type === 'administration'): ?>
-      <div class="card" style="margin-top:12px;">
-        <h2>Administration</h2>
+        <h2>Administração</h2>
 
         <div class="field">
-          <label for="product_id">Produto (frasco)</label>
-          <select id="product_id" name="product_id" required>
-            <?php foreach ($_SESSION['products'] as $p): ?>
-              <option value="<?= htmlspecialchars((string)$p['product_id']) ?>"
-                <?= ((int)$p['product_id'] === (int)$adminDefaultProduct) ? 'selected' : '' ?>>
-                <?= htmlspecialchars($p['name']) ?>
+          <label for="produto_id">Produto</label>
+          <select id="produto_id" name="produto_id" required>
+            <?php foreach ($products as $pr): ?>
+              <option value="<?= htmlspecialchars((string)$pr['id']) ?>"
+                <?= ((int)$pr['id'] === (int)$admin['produto_id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($pr['nome']) ?>
               </option>
             <?php endforeach; ?>
           </select>
-          <small>Um produto pode ser usado no máximo em 5 administrações.</small>
         </div>
 
         <div class="field">
-          <label for="dose_no">Dose nº</label>
-          <input id="dose_no" name="dose_no" type="number" min="0"
-                 value="<?= htmlspecialchars((string)($admin['dose_no'] ?? 0)) ?>" required>
+          <label for="dose_nº">Dose nº</label>
+          <input id="dose_nº" name="dose_nº" type="number" min="0"
+                 value="<?= htmlspecialchars((string)$admin['dose_nº']) ?>" required>
         </div>
 
         <div class="field">
-          <label for="phase">Phase</label>
-          <select id="phase" name="phase" required>
-            <option value="build_up" <?= (($admin['phase'] ?? '') === 'build_up') ? 'selected' : '' ?>>build_up</option>
-            <option value="maintenance" <?= (($admin['phase'] ?? '') === 'maintenance') ? 'selected' : '' ?>>maintenance</option>
-          </select>
+          <label for="fase">Fase</label>
+          <input id="fase" name="fase" value="<?= htmlspecialchars((string)$admin['fase']) ?>" required>
         </div>
 
         <div class="field">
-          <label for="administration_site">Local de administração</label>
-          <input id="administration_site" name="administration_site"
-                 value="<?= htmlspecialchars((string)($admin['administration_site'] ?? '')) ?>" required>
+          <label for="local_administração">Local de administração</label>
+          <input id="local_administração" name="local_administração"
+                 value="<?= htmlspecialchars((string)$admin['local_administração']) ?>" required>
         </div>
 
         <div class="field">
           <label for="dose_ml">Dose (mL)</label>
           <input id="dose_ml" name="dose_ml" type="number" step="0.01" min="0.01"
-                 value="<?= htmlspecialchars((string)($admin['dose_ml'] ?? 0.1)) ?>" required>
+                 value="<?= htmlspecialchars((string)$admin['dose_ml']) ?>" required>
         </div>
 
         <div class="field">
-          <label for="observation_minutes">Minutos de observação</label>
-          <input id="observation_minutes" name="observation_minutes" type="number" min="1"
-                 value="<?= htmlspecialchars((string)($admin['observation_minutes'] ?? 30)) ?>" required>
+          <label for="minutos_observação">Minutos de observação</label>
+          <input id="minutos_observação" name="minutos_observação" type="number" min="1"
+                 value="<?= htmlspecialchars((string)$admin['minutos_observação']) ?>" required>
         </div>
 
         <div style="margin-top:8px;">
-          <a class="btn" href="<?= $BASE_URL ?>/adverse_event.php?visit_id=<?= urlencode((string)$id) ?>">Gerir evento adverso</a>
+          <a class="btn btn-soft" href="<?= $BASE_URL ?>/adverse_event.php?visita_id=<?= urlencode((string)$id) ?>">
+            Gerir evento adverso
+          </a>
         </div>
       </div>
     <?php endif; ?>
