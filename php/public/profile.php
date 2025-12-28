@@ -45,10 +45,11 @@ $user = $_SESSION['user'] ?? null;
       <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
         <a class="btn" href="<?= $BASE_URL ?>/index.php">Voltar</a>
 
-        <a class="btn"
-           href="<?= $BASE_URL ?>/reset.php?email=<?= urlencode($user['email']) ?>">
-          Alterar password
-        </a>
+        <?php if (($user['role'] ?? '') === 'doctor'): ?>
+          <a class="btn" href="<?= $BASE_URL ?>/reset.php?info=<?= urlencode('Alterar password') ?>">
+            Alterar password
+          </a>
+        <?php endif; ?>
 
         <a class="btn btn-primary" href="<?= $BASE_URL ?>/logout.php">Terminar sessão</a>
       </div>

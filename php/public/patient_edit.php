@@ -1,90 +1,84 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_role(['admin','doctor']);
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/patients.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/patients.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-if (!isset($_SESSION['patients'])) {
-  $_SESSION['patients'] = [];
+$stmt = $pdo->prepare('SELECT * FROM "Pacientes" WHERE "id" = ?');
+$stmt->execute([$id]);
+$patient = $stmt->fetch();
+
+if (!$patient) {
+  header('Location: ' . $BASE_URL . '/patients.php?error=' . urlencode('Paciente não encontrado'));
+  exit;
 }
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['patients']); $i++) {
-  if ((int)$_SESSION['patients'][$i]['patient_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/patients.php?error=Paciente+n%C3%A3o+encontrado');
+function go_error(int $id, string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $full_name  = trim($_POST['full_name'] ?? '');
-  $birth_date = trim($_POST['birth_date'] ?? '');
-  $sex        = trim($_POST['sex'] ?? '');
-  $phone      = trim($_POST['phone'] ?? '');
+  $nome_completo   = trim($_POST['nome_completo'] ?? '');
+  $data_nascimento = trim($_POST['data_nascimento'] ?? '');
+  $sexo            = trim($_POST['sexo'] ?? '');
+  $telefone        = trim($_POST['telefone'] ?? '');
+  $email           = trim($_POST['email'] ?? '');
 
-  $validSex = ['M', 'F', 'X'];
-
-  /* ---------- Validação do telefone (Portugal) ---------- */
-  if (!preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
-    header(
-      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
-      '&error=Telefone+inválido+(telemóvel+português,+ex:+91xxxxxxx)'
-    );
-    exit;
+  if ($nome_completo === '' || $data_nascimento === '' || $sexo === '') {
+    go_error($id, 'Preenche nome, data de nascimento e sexo.');
   }
 
-
-  /* ---------- Validação da data de nascimento ---------- */
-  $dateObj = DateTime::createFromFormat('Y-m-d', $birth_date);
-  $today   = new DateTime();
-
-  if (
-    !$dateObj ||
-    $dateObj->format('Y-m-d') !== $birth_date ||
-    (int)$dateObj->format('Y') < 1900 ||
-    $dateObj > $today
-  ) {
-    header(
-      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
-      '&error=Data+de+nascimento+inválida'
-    );
-    exit;
+  if (!in_array($sexo, ['F','M','O'], true)) {
+    go_error($id, 'Sexo inválido (usa F, M ou O).');
   }
 
-  /* ---------- Validação geral ---------- */
-  if ($full_name === '' || !in_array($sex, $validSex, true)) {
-    header(
-      'Location: ' . $BASE_URL . '/patient_edit.php?id=' . urlencode((string)$id) .
-      '&error=Preenche+os+campos+obrigatórios+correctamente'
-    );
-    exit;
+  $dt = DateTime::createFromFormat('Y-m-d', $data_nascimento);
+  if (!$dt || $dt->format('Y-m-d') !== $data_nascimento) {
+    go_error($id, 'Data de nascimento inválida (formato: AAAA-MM-DD).');
   }
 
-  /* ---------- Guardar ---------- */
-  $_SESSION['patients'][$index]['full_name']  = $full_name;
-  $_SESSION['patients'][$index]['birth_date'] = $birth_date;
-  $_SESSION['patients'][$index]['sex']        = $sex;
-  $_SESSION['patients'][$index]['phone']      = $phone;
+  if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    go_error($id, 'Email inválido.');
+  }
 
-  header('Location: ' . $BASE_URL . '/patients.php?success=Paciente+atualizado+com+sucesso');
+  // duplicado email ignorando o próprio
+  if ($email !== '') {
+    $chk = $pdo->prepare('SELECT 1 FROM "Pacientes" WHERE lower("email") = lower(?) AND "id" <> ?');
+    $chk->execute([$email, $id]);
+    if ($chk->fetchColumn()) {
+      go_error($id, 'Já existe um paciente com esse email.');
+    }
+  }
+
+  $upd = $pdo->prepare('
+    UPDATE "Pacientes"
+    SET "nome_completo"=?, "data_nascimento"=?, "sexo"=?, "telefone"=?, "email"=?
+    WHERE "id"=?
+  ');
+  $upd->execute([
+    $nome_completo,
+    $data_nascimento,
+    $sexo,
+    ($telefone === '' ? null : $telefone),
+    ($email === '' ? null : $email),
+    $id
+  ]);
+
+  header('Location: ' . $BASE_URL . '/patients.php?success=' . urlencode('Paciente atualizado com sucesso'));
   exit;
 }
 
-
-$patient = $_SESSION['patients'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -98,49 +92,36 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <form method="POST" action="<?= $BASE_URL ?>/patient_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
-      <label for="full_name">Nome completo</label>
-      <input id="full_name" name="full_name" value="<?= htmlspecialchars($patient['full_name']) ?>" required>
+      <label for="nome_completo">Nome completo</label>
+      <input id="nome_completo" name="nome_completo" value="<?= htmlspecialchars($patient['nome_completo']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="birth_date">Data de nascimento</label>
-      <input
-        type="date"
-        name="birth_date"
-        id="birth_date"
-        value="<?= htmlspecialchars($patient['birth_date'] ?? '') ?>"
-        min="1900-01-01"
-        max="<?= date('Y-m-d') ?>"
-        required
-      >
+      <label for="data_nascimento">Data de nascimento</label>
+      <input id="data_nascimento" name="data_nascimento" type="date"
+             value="<?= htmlspecialchars($patient['data_nascimento']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="sex">Sexo</label>
-      <select id="sex" name="sex" required>
-        <option value="F" <?= $patient['sex']==='F' ? 'selected' : '' ?>>F</option>
-        <option value="M" <?= $patient['sex']==='M' ? 'selected' : '' ?>>M</option>
-        <option value="X" <?= $patient['sex']==='X' ? 'selected' : '' ?>>X</option>
+      <label for="sexo">Sexo</label>
+      <select id="sexo" name="sexo" required>
+        <option value="F" <?= ($patient['sexo']==='F') ? 'selected' : '' ?>>F</option>
+        <option value="M" <?= ($patient['sexo']==='M') ? 'selected' : '' ?>>M</option>
+        <option value="O" <?= ($patient['sexo']==='O') ? 'selected' : '' ?>>O</option>
       </select>
     </div>
 
     <div class="field">
-      <label for="phone">Telefone</label>
-    <input
-      type="tel"
-      name="phone"
-      id="phone"
-      value="<?= htmlspecialchars($patient['phone'] ?? '') ?>"
-      pattern="^(91|92|93|96)[0-9]{7}$"
-      inputmode="numeric"
-      minlength="9"
-      maxlength="9"
-      required
-      title="Introduz um telemóvel português válido (91, 92, 93 ou 96)"
-    >
+      <label for="telefone">Telefone (opcional)</label>
+      <input id="telefone" name="telefone" value="<?= htmlspecialchars((string)($patient['telefone'] ?? '')) ?>">
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div class="field">
+      <label for="email">Email (opcional)</label>
+      <input id="email" name="email" type="email" value="<?= htmlspecialchars((string)($patient['email'] ?? '')) ?>">
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
       <a class="btn" href="<?= $BASE_URL ?>/patients.php">Cancelar</a>
     </div>

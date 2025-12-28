@@ -1,50 +1,53 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_role(['admin','doctor']);
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/patients.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/patients.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-if (!isset($_SESSION['patients'])) {
-  $_SESSION['patients'] = [];
-}
+$stmt = $pdo->prepare('SELECT "id","nome_completo" FROM "Pacientes" WHERE "id" = ?');
+$stmt->execute([$id]);
+$patient = $stmt->fetch();
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['patients']); $i++) {
-  if ((int)$_SESSION['patients'][$i]['patient_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/patients.php?error=Paciente+n%C3%A3o+encontrado');
+if (!$patient) {
+  header('Location: ' . $BASE_URL . '/patients.php?error=' . urlencode('Paciente não encontrado'));
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  array_splice($_SESSION['patients'], $index, 1);
-  header('Location: ' . $BASE_URL . '/patients.php?success=Paciente+apagado+com+sucesso');
-  exit;
+  try {
+    $del = $pdo->prepare('DELETE FROM "Pacientes" WHERE "id" = ?');
+    $del->execute([$id]);
+
+    header('Location: ' . $BASE_URL . '/patients.php?success=' . urlencode('Paciente apagado com sucesso'));
+    exit;
+  } catch (PDOException $e) {
+    header('Location: ' . $BASE_URL . '/patient_delete.php?id=' . urlencode((string)$id) . '&error=' . urlencode('Não foi possível apagar: existem registos associados a este paciente.'));
+    exit;
+  }
 }
 
-$patient = $_SESSION['patients'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Apagar paciente</h1>
 
+  <?php if (!empty($_GET['error'])): ?>
+    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
+  <?php endif; ?>
+
   <p>
     Tens a certeza que queres apagar:
-    <strong><?= htmlspecialchars($patient['full_name']) ?></strong>?
+    <strong><?= htmlspecialchars($patient['nome_completo']) ?></strong>?
   </p>
 
   <form method="POST" action="<?= $BASE_URL ?>/patient_delete.php?id=<?= urlencode((string)$id) ?>">

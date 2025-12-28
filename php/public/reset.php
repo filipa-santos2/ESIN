@@ -5,39 +5,44 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-$email = trim($_GET['email'] ?? '');
 $info  = trim($_GET['info'] ?? '');
 
-// Validação básica
-if ($email === '') {
-  header('Location: ' . $BASE_URL . '/login.php?error=Pedido+inv%C3%A1lido');
+// Quem está a definir password (primeiro acesso / reset)
+$pending = $_SESSION['pending_set_password'] ?? null;
+
+// Se alguém já está logado como DOCTOR e vem aqui para mudar a própria password,
+// podemos aceitar o user atual como "pending" (sem depender do login_process).
+if (!$pending && !empty($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'doctor') {
+  $pending = [
+    'doctor_id' => (int)($_SESSION['user']['doctor_id'] ?? 0),
+    'email'     => (string)($_SESSION['user']['email'] ?? ''),
+    'full_name' => (string)($_SESSION['user']['full_name'] ?? ''),
+    'role'      => 'doctor',
+  ];
+}
+
+if (!$pending || empty($pending['doctor_id'])) {
+  header('Location: ' . $BASE_URL . '/login.php?error=' . urlencode('Pedido inválido'));
   exit;
 }
 
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [];
-}
+$doctorId = (int)$pending['doctor_id'];
 
-// Encontrar médico pelo email
-$index = null;
-for ($i = 0; $i < count($_SESSION['doctors']); $i++) {
-  $dEmail = $_SESSION['doctors'][$i]['email'] ?? '';
-  if ($dEmail !== '' && strtolower($dEmail) === strtolower($email)) {
-    $index = $i;
-    break;
-  }
-}
+// Confirmar que o médico existe na BD
+$stmt = $pdo->prepare('SELECT "id","nome_completo","email","password_hash" FROM "Médicos" WHERE "id" = ?');
+$stmt->execute([$doctorId]);
+$doctor = $stmt->fetch();
 
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/login.php?error=Utilizador+n%C3%A3o+encontrado');
+if (!$doctor) {
+  unset($_SESSION['pending_set_password']);
+  header('Location: ' . $BASE_URL . '/login.php?error=' . urlencode('Utilizador não encontrado'));
   exit;
 }
 
 // Segurança: se alguém estiver logado como MÉDICO, só pode alterar a própria password
 if (!empty($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'doctor') {
-  $loggedEmail = strtolower($_SESSION['user']['email'] ?? '');
-  if ($loggedEmail !== strtolower($email)) {
-    header('Location: ' . $BASE_URL . '/profile.php?error=N%C3%A3o+podes+alterar+a+password+de+outro+utilizador');
+  if ((int)($_SESSION['user']['doctor_id'] ?? 0) !== $doctorId) {
+    header('Location: ' . $BASE_URL . '/profile.php?error=' . urlencode('Não podes alterar a password de outro utilizador'));
     exit;
   }
 }
@@ -45,8 +50,8 @@ if (!empty($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'doctor')
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $password = $_POST['password'] ?? '';
-  $confirm  = $_POST['confirm'] ?? '';
+  $password = (string)($_POST['password'] ?? '');
+  $confirm  = (string)($_POST['confirm'] ?? '');
 
   if ($password === '' || $confirm === '') {
     $error = 'Preenche ambos os campos.';
@@ -55,10 +60,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } elseif (strlen($password) < 8) {
     $error = 'A password deve ter pelo menos 8 caracteres.';
   } else {
-    $_SESSION['doctors'][$index]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+    $hash = password_hash($password, PASSWORD_DEFAULT);
 
-    // Depois de definir password, manda para login
-    header('Location: ' . $BASE_URL . '/login.php?success=Password+definida+com+sucesso.+Podes+iniciar+sess%C3%A3o');
+    $upd = $pdo->prepare('UPDATE "Médicos" SET "password_hash" = ? WHERE "id" = ?');
+    $upd->execute([$hash, $doctorId]);
+
+    // Depois de definir password, manda para login (fluxo original)
+    unset($_SESSION['pending_set_password']);
+
+    header('Location: ' . $BASE_URL . '/login.php?success=' . urlencode('Password definida com sucesso. Podes iniciar sessão'));
     exit;
   }
 }
@@ -74,7 +84,7 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php endif; ?>
 
   <p style="opacity:.85; margin-top:6px;">
-    Conta: <strong><?= htmlspecialchars($email) ?></strong>
+    Conta: <strong><?= htmlspecialchars($doctor['email']) ?></strong>
   </p>
 
   <?php if (!empty($error)): ?>

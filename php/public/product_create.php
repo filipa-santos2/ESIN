@@ -1,65 +1,54 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-if (!isset($_SESSION['products'])) {
-  $_SESSION['products'] = [];
-}
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
-}
+// carregar fabricantes para o select
+$fabricantes = $pdo->query('SELECT "id","nome" FROM "Fabricantes" ORDER BY "nome"')->fetchAll();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $manufacturer_id = (int)($_POST['manufacturer_id'] ?? 0);
-  $name = trim($_POST['name'] ?? '');
-  $type = trim($_POST['type'] ?? '');
-  $concentration = trim($_POST['concentration'] ?? '');
-  $unit = trim($_POST['unit'] ?? '');
-  $notes = trim($_POST['notes'] ?? '');
-
-  if ($manufacturer_id <= 0 || $name === '' || $type === '' || $concentration === '' || $unit === '') {
-    header('Location: ' . $BASE_URL . '/product_create.php?error=Preenche+todos+os+campos+obrigat%C3%B3rios');
-    exit;
-  }
-
-  // confirmar se manufacturer_id existe mesmo
-  $manufacturerExists = false;
-  foreach ($_SESSION['manufacturers'] as $m) {
-    if ((int)$m['manufacturer_id'] === $manufacturer_id) {
-      $manufacturerExists = true;
-      break;
-    }
-  }
-  if (!$manufacturerExists) {
-    header('Location: ' . $BASE_URL . '/product_create.php?error=Fabricante+inv%C3%A1lido');
-    exit;
-  }
-
-  // gerar id novo
-  $maxId = 0;
-  foreach ($_SESSION['products'] as $p) {
-    $maxId = max($maxId, (int)$p['product_id']);
-  }
-  $newId = $maxId + 1;
-
-  $_SESSION['products'][] = [
-    'product_id' => $newId,
-    'manufacturer_id' => $manufacturer_id,
-    'name' => $name,
-    'type' => $type,
-    'concentration' => $concentration,
-    'unit' => $unit,
-    'notes' => $notes,
-  ];
-
-  header('Location: ' . $BASE_URL . '/products.php?success=Produto+adicionado+com+sucesso');
+function go_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/product_create.php?error=' . urlencode($msg));
   exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $fabricante_id = (int)($_POST['fabricante_id'] ?? 0);
+  $nome = trim($_POST['nome'] ?? '');
+  $tipo = trim($_POST['tipo'] ?? '');
+  $conc_raw = trim($_POST['concentração'] ?? '');
+  $unidade = trim($_POST['unidade'] ?? '');
+
+  if ($fabricante_id <= 0 || $nome === '' || $tipo === '') {
+    go_error('Preenche os campos obrigatórios (nome, tipo, fabricante).');
+  }
+
+  $concentracao = null;
+  if ($conc_raw !== '') {
+    $concentracao = (float)str_replace(',', '.', $conc_raw);
+  }
+
+  // confirmar se fabricante existe
+  $chk = $pdo->prepare('SELECT 1 FROM "Fabricantes" WHERE "id" = ?');
+  $chk->execute([$fabricante_id]);
+  if (!$chk->fetchColumn()) {
+    go_error('Fabricante inválido.');
+  }
+
+  $ins = $pdo->prepare('
+    INSERT INTO "Produtos" ("nome","tipo","concentração","unidade","fabricante_id")
+    VALUES (?,?,?,?,?)
+  ');
+  $ins->execute([$nome, $tipo, $concentracao, ($unidade === '' ? null : $unidade), $fabricante_id]);
+
+  header('Location: ' . $BASE_URL . '/products.php?success=' . urlencode('Produto adicionado com sucesso'));
+  exit;
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -70,7 +59,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <?php if (empty($_SESSION['manufacturers'])): ?>
+  <?php if (empty($fabricantes)): ?>
     <div class="msg msg-error">
       Não podes criar produtos sem fabricantes.
       Vai a <a href="<?= $BASE_URL ?>/manufacturers.php">Fabricantes</a> e cria pelo menos um.
@@ -78,42 +67,35 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php else: ?>
     <form method="POST" action="<?= $BASE_URL ?>/product_create.php">
       <div class="field">
-        <label for="manufacturer_id">Fabricante</label>
-        <select id="manufacturer_id" name="manufacturer_id" required>
-          <?php foreach ($_SESSION['manufacturers'] as $m): ?>
-            <option value="<?= htmlspecialchars((string)$m['manufacturer_id']) ?>">
-              <?= htmlspecialchars($m['name']) ?>
-            </option>
+        <label for="fabricante_id">Fabricante</label>
+        <select id="fabricante_id" name="fabricante_id" required>
+          <?php foreach ($fabricantes as $f): ?>
+            <option value="<?= htmlspecialchars((string)$f['id']) ?>"><?= htmlspecialchars($f['nome']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
 
       <div class="field">
-        <label for="name">Nome do produto</label>
-        <input id="name" name="name" required>
+        <label for="nome">Nome</label>
+        <input id="nome" name="nome" required>
       </div>
 
       <div class="field">
-        <label for="type">Tipo</label>
-        <input id="type" name="type" placeholder="Ex: extract / tablet / injection" required>
+        <label for="tipo">Tipo</label>
+        <input id="tipo" name="tipo" placeholder="Ex: tablet / injection / extract" required>
       </div>
 
       <div class="field">
-        <label for="concentration">Concentração</label>
-        <input id="concentration" name="concentration" placeholder="Ex: 10 000 SQ-U/mL" required>
+        <label for="concentração">Concentração (opcional)</label>
+        <input id="concentração" name="concentração" inputmode="decimal" placeholder="Ex: 12.0">
       </div>
 
       <div class="field">
-        <label for="unit">Unidade</label>
-        <input id="unit" name="unit" placeholder="Ex: mL / mg / tablet" required>
+        <label for="unidade">Unidade (opcional)</label>
+        <input id="unidade" name="unidade" placeholder="Ex: mL / mg / tablet">
       </div>
 
-      <div class="field">
-        <label for="notes">Notas (opcional)</label>
-        <textarea id="notes" name="notes" rows="3"></textarea>
-      </div>
-
-      <div style="display:flex; gap:10px;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-primary" type="submit">Guardar</button>
         <a class="btn" href="<?= $BASE_URL ?>/products.php">Cancelar</a>
       </div>

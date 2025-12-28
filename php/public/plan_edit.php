@@ -1,203 +1,159 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
-$id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('ID inválido'));
-  exit;
-}
-
-if (!isset($_SESSION['aitplans'])) $_SESSION['aitplans'] = [];
-if (!isset($_SESSION['patients'])) $_SESSION['patients'] = [];
-if (!isset($_SESSION['products'])) $_SESSION['products'] = [];
-
-$index = null;
-for ($i = 0; $i < count($_SESSION['aitplans']); $i++) {
-  if ((int)$_SESSION['aitplans'][$i]['aitplan_id'] === $id) { $index = $i; break; }
-}
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('Plano não encontrado'));
-  exit;
-}
-
-function go_edit_error(int $id, string $msg): void {
+function go_error(int $id, string $msg): void {
   global $BASE_URL;
   header('Location: ' . $BASE_URL . '/plan_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
-function is_valid_ymd(string $date): bool {
-  $dt = DateTime::createFromFormat('Y-m-d', $date);
-  return $dt && $dt->format('Y-m-d') === $date;
-}
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) { header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('ID inválido')); exit; }
 
+try {
+  $planStmt = $pdo->prepare('SELECT * FROM "Planos AIT" WHERE "id" = ?');
+  $planStmt->execute([$id]);
+  $plan = $planStmt->fetch();
+  if (!$plan) { header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('Plano não encontrado')); exit; }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $patient_id = (int)($_POST['patient_id'] ?? 0);
-  $product_id = (int)($_POST['product_id'] ?? 0);
-  $start_date = trim($_POST['start_date'] ?? '');
-  $end_date   = trim($_POST['end_date'] ?? '');
-  $status     = trim($_POST['status'] ?? '');
-  $route      = trim($_POST['route'] ?? '');
-  $build_up_protocol = trim($_POST['build_up_protocol'] ?? '');
-  $maintenance_protocol = trim($_POST['maintenance_protocol'] ?? '');
-  $notes      = trim($_POST['notes'] ?? '');
-
-  if ($patient_id <= 0 || $product_id <= 0 || $start_date === '' || $status === '' ||
-      $route === '' || $build_up_protocol === '' || $maintenance_protocol === '') {
-    go_edit_error($id, 'Preenche todos os campos obrigatórios');
-  }
-
-  $allowedStatus = ['not_started','build_up','maintenance','concluded','cancelled','lost_follow_up'];
-  $allowedRoute  = ['subcutaneous','intramuscular','sublingual','oral'];
-  $allowedBuild  = ['standard','rush','semi-rush','ultra-rush','continuous'];
-  $allowedMaint  = ['standard','extended-interval','shortened-interval'];
-
-  if (!in_array($status, $allowedStatus, true)) go_edit_error($id, 'Status inválido');
-  if (!in_array($route, $allowedRoute, true)) go_edit_error($id, 'Route inválida');
-  if (!in_array($build_up_protocol, $allowedBuild, true)) go_edit_error($id, 'Build-up protocol inválido');
-  if (!in_array($maintenance_protocol, $allowedMaint, true)) go_edit_error($id, 'Maintenance protocol inválido');
-
-  // Validar start_date (obrigatória)
-if (!is_valid_ymd($start_date)) {
-  go_edit_error($id, 'Start date inválida');
-}
-
-// Validar end_date (opcional, mas se existir tem de ser válida e >= start_date)
-if ($end_date !== '') {
-  if (!is_valid_ymd($end_date)) {
-    go_edit_error($id, 'End date inválida');
-  }
-
-  $startObj = new DateTime($start_date);
-  $endObj   = new DateTime($end_date);
-
-  if ($endObj < $startObj) {
-    go_edit_error($id, 'End date tem de ser igual ou posterior a start date');
-  }
-}
-
-$end_date = ($end_date === '' ? null : $end_date);
-
-  $_SESSION['aitplans'][$index]['patient_id'] = $patient_id;
-  $_SESSION['aitplans'][$index]['product_id'] = $product_id;
-  $_SESSION['aitplans'][$index]['start_date'] = $start_date;
-  $_SESSION['aitplans'][$index]['end_date'] = $end_date;
-  $_SESSION['aitplans'][$index]['route'] = $route;
-  $_SESSION['aitplans'][$index]['build_up_protocol'] = $build_up_protocol;
-  $_SESSION['aitplans'][$index]['maintenance_protocol'] = $maintenance_protocol;
-  $_SESSION['aitplans'][$index]['status'] = $status;
-  $_SESSION['aitplans'][$index]['notes'] = $notes;
-
-  header('Location: ' . $BASE_URL . '/plans.php?success=' . urlencode('Plano atualizado com sucesso'));
+  $patients = $pdo->query('SELECT "id","nome_completo" FROM "Pacientes" ORDER BY "nome_completo"')->fetchAll();
+  $products = $pdo->query('SELECT "id","nome" FROM "Produtos" ORDER BY "nome"')->fetchAll();
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/plans.php?error=' . urlencode('Erro: ' . $e->getMessage()));
   exit;
 }
 
-$pl = $_SESSION['aitplans'][$index];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $paciente_id = (int)($_POST['paciente_id'] ?? 0);
+  $produto_id  = (int)($_POST['produto_id'] ?? 0);
 
-require_once __DIR__ . '/../../includes/config.php';
+  $data_inicio = trim($_POST['data_início'] ?? '');
+  $data_fim    = trim($_POST['data_fim'] ?? '');
+
+  $via = trim($_POST['via'] ?? '');
+  $prot_bu = trim($_POST['protocolo_build_up'] ?? '');
+  $prot_m  = trim($_POST['protocolo_maintenance'] ?? '');
+  $estado  = trim($_POST['estado'] ?? '');
+  $notas   = trim($_POST['notas'] ?? '');
+
+  if ($paciente_id <= 0 || $produto_id <= 0) go_error($id, 'Seleciona paciente e produto');
+  if ($data_inicio === '' || $via === '' || $prot_bu === '' || $prot_m === '' || $estado === '') {
+    go_error($id, 'Preenche os campos obrigatórios');
+  }
+  if ($data_fim !== '' && $data_fim < $data_inicio) {
+    go_error($id, 'A data de fim tem de ser igual ou posterior à data de início');
+  }
+
+  try {
+    $stmt = $pdo->prepare('
+      UPDATE "Planos AIT"
+      SET
+        "paciente_id" = :paciente_id,
+        "produto_id" = :produto_id,
+        "data_início" = :data_inicio,
+        "data_fim" = :data_fim,
+        "via" = :via,
+        "protocolo_build_up" = :bu,
+        "protocolo_maintenance" = :m,
+        "estado" = :estado,
+        "notas" = :notas
+      WHERE "id" = :id
+    ');
+    $stmt->execute([
+      ':paciente_id' => $paciente_id,
+      ':produto_id'  => $produto_id,
+      ':data_inicio' => $data_inicio,
+      ':data_fim'    => ($data_fim === '' ? null : $data_fim),
+      ':via'         => $via,
+      ':bu'          => $prot_bu,
+      ':m'           => $prot_m,
+      ':estado'      => $estado,
+      ':notas'       => ($notas === '' ? null : $notas),
+      ':id'          => $id,
+    ]);
+
+    header('Location: ' . $BASE_URL . '/plans.php?success=' . urlencode('Plano AIT atualizado com sucesso'));
+    exit;
+  } catch (Throwable $e) {
+    go_error($id, 'Erro ao atualizar plano: ' . $e->getMessage());
+  }
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
-  <h1>Editar plano AIT</h1>
+  <h1>Editar Plano AIT</h1>
+  <p><small>ID: <?= htmlspecialchars((string)$id) ?></small></p>
+
+  <?php if (!empty($_GET['error'])): ?>
+    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
+  <?php endif; ?>
 
   <form method="POST" action="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
-      <label for="patient_id">Paciente</label>
-      <select id="patient_id" name="patient_id" required>
-        <?php foreach ($_SESSION['patients'] as $p): ?>
-          <option value="<?= htmlspecialchars((string)$p['patient_id']) ?>"
-            <?= ((int)$p['patient_id'] === (int)$pl['patient_id']) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($p['full_name']) ?>
+      <label for="paciente_id">Paciente</label>
+      <select id="paciente_id" name="paciente_id" required>
+        <?php foreach ($patients as $p): ?>
+          <option value="<?= (int)$p['id'] ?>" <?= ((int)$p['id'] === (int)$plan['paciente_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($p['nome_completo']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="field">
-      <label for="product_id">Produto</label>
-      <select id="product_id" name="product_id" required>
-        <?php foreach ($_SESSION['products'] as $pr): ?>
-<?php
-            $pid = $pr['product_id'] ?? $pr['serial_number'] ?? '';
-            $label = '';
-            if (isset($pr['serial_number'])) $label .= $pr['serial_number'];
-            if (isset($pr['brand'])) $label .= ($label ? ' — ' : '') . $pr['brand'];
-            if ($label === '') $label = (string)$pid;
-          ?>
-          <option value="<?= htmlspecialchars((string)$pid) ?>"
-            <?= ((string)$pid === (string)($pl['product_id'] ?? '')) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($label) ?>
+      <label for="produto_id">Produto</label>
+      <select id="produto_id" name="produto_id" required>
+        <?php foreach ($products as $pr): ?>
+          <option value="<?= (int)$pr['id'] ?>" <?= ((int)$pr['id'] === (int)$plan['produto_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($pr['nome']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="field">
-      <label for="start_date">Start date</label>
-      <input id="start_date" name="start_date" type="date"
-            min="1900-01-01"
-            max="<?= date('Y-m-d') ?>"
-            value="<?= htmlspecialchars((string)($pl['start_date'] ?? '')) ?>"
-            required>
+      <label for="data_início">Data de início</label>
+      <input id="data_início" name="data_início" type="date" value="<?= htmlspecialchars($plan['data_início']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="end_date">End date (opcional)</label>
-      <input id="end_date" name="end_date" type="date"
-            min="1900-01-01"
-            max="<?= date('Y-m-d') ?>"
-            value="<?= htmlspecialchars((string)($pl['end_date'] ?? '')) ?>">
+      <label for="data_fim">Data de fim (opcional)</label>
+      <input id="data_fim" name="data_fim" type="date" value="<?= htmlspecialchars($plan['data_fim'] ?? '') ?>">
     </div>
 
     <div class="field">
-      <label for="route">Route</label>
-      <select id="route" name="route" required>
-        <?php foreach (['subcutaneous','intramuscular','sublingual','oral'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= ((string)($pl['route'] ?? '') === $opt) ? 'selected' : '' ?>><?= $opt ?></option>
-        <?php endforeach; ?>
-      </select>
+      <label for="via">Via</label>
+      <input id="via" name="via" value="<?= htmlspecialchars($plan['via']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="build_up_protocol">Build-up protocol</label>
-      <select id="build_up_protocol" name="build_up_protocol" required>
-        <?php foreach (['standard','rush','semi-rush','ultra-rush','continuous'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= ((string)($pl['build_up_protocol'] ?? '') === $opt) ? 'selected' : '' ?>><?= $opt ?></option>
-        <?php endforeach; ?>
-      </select>
+      <label for="protocolo_build_up">Protocolo build_up</label>
+      <input id="protocolo_build_up" name="protocolo_build_up" value="<?= htmlspecialchars($plan['protocolo_build_up']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="maintenance_protocol">Maintenance protocol</label>
-      <select id="maintenance_protocol" name="maintenance_protocol" required>
-        <?php foreach (['standard','extended-interval','shortened-interval'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= ((string)($pl['maintenance_protocol'] ?? '') === $opt) ? 'selected' : '' ?>><?= $opt ?></option>
-        <?php endforeach; ?>
-      </select>
+      <label for="protocolo_maintenance">Protocolo maintenance</label>
+      <input id="protocolo_maintenance" name="protocolo_maintenance" value="<?= htmlspecialchars($plan['protocolo_maintenance']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="status">Status</label>
-      <select id="status" name="status" required>
-        <?php foreach (['not_started','build_up','maintenance','concluded','cancelled','lost_follow_up'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= ((string)($pl['status'] ?? '') === $opt) ? 'selected' : '' ?>><?= $opt ?></option>
-        <?php endforeach; ?>
-      </select>
+      <label for="estado">Estado</label>
+      <input id="estado" name="estado" value="<?= htmlspecialchars($plan['estado']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="notes">Notas (opcional)</label>
-      <textarea id="notes" name="notes" rows="3"><?= htmlspecialchars((string)($pl['notes'] ?? '')) ?></textarea>
+      <label for="notas">Notas (opcional)</label>
+      <textarea id="notas" name="notas" rows="3"><?= htmlspecialchars($plan['notas'] ?? '') ?></textarea>
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
       <a class="btn" href="<?= $BASE_URL ?>/plans.php">Cancelar</a>
+      <a class="btn btn-soft" href="<?= $BASE_URL ?>/plan_allergens.php?id=<?= urlencode((string)$id) ?>">Gerir alergénios</a>
     </div>
   </form>
 </section>

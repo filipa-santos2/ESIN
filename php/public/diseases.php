@@ -1,55 +1,56 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+require_once __DIR__ . '/../../includes/auth.php';
+require_role(['admin','doctor']);
 
-if (!isset($_SESSION['diseases'])) {
-  $_SESSION['diseases'] = [
-    ['icd11_code' => 'CA23', 'name' => 'Asma'],
-    ['icd11_code' => '4A00', 'name' => 'Rinite alérgica'],
-  ];
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-$diseases = $_SESSION['diseases'];
+$diseases = $pdo->query('
+  SELECT "código","designação"
+  FROM "Doenças"
+  ORDER BY "código" ASC
+')->fetchAll();
 
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
-  <h1>Doenças (ICD-11)</h1>
+  <h1>Doenças</h1>
 
-  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
-    <p style="margin:0;">Catálogo de doenças (dados em sessão nesta fase).</p>
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <p style="margin:0;">Lista de doenças (SQLite).</p>
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/disease_create.php">Adicionar doença</a>
   </div>
 </section>
 
 <section class="card">
-  <table class="table table-compact">
-    <thead>
-      <tr>
-        <th>Código ICD-11</th>
-        <th>Nome</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($diseases as $d): ?>
+  <?php if (empty($diseases)): ?>
+    <p>Não existem doenças.</p>
+  <?php else: ?>
+    <table class="table table-compact">
+      <thead>
         <tr>
-          <td><?= htmlspecialchars($d['icd11_code']) ?></td>
-          <td><?= htmlspecialchars($d['name']) ?></td>
-          <td>
-            <div class="actions">
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($d['icd11_code']) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/disease_delete.php?code=<?= urlencode($d['icd11_code']) ?>">Apagar</a>
-            </div>
-          </td>
+          <th>Código</th>
+          <th>Designação</th>
+          <th>Ações</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach ($diseases as $d): ?>
+          <tr>
+            <td><?= htmlspecialchars($d['código']) ?></td>
+            <td><?= htmlspecialchars($d['designação']) ?></td>
+            <td>
+              <div class="actions">
+                <a class="btn btn-soft" href="<?= $BASE_URL ?>/disease_edit.php?código=<?= urlencode((string)$d['código']) ?>">Editar</a>
+                <a class="btn btn-danger" href="<?= $BASE_URL ?>/disease_delete.php?código=<?= urlencode((string)$d['código']) ?>">Apagar</a>
+              </div>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

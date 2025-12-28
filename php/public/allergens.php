@@ -1,27 +1,31 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-if (!isset($_SESSION['allergens'])) {
-  $_SESSION['allergens'] = [
-    ['who_iuis_code' => 't1', 'species' => 'Dermatophagoides pteronyssinus', 'common_name' => 'Ácaro do pó', 'category' => 'mite'],
-    ['who_iuis_code' => 'g6', 'species' => 'Lolium perenne', 'common_name' => 'Azevém', 'category' => 'pollen'],
-  ];
-}
-
-$allergens = $_SESSION['allergens'];
+require_once __DIR__ . '/../../includes/auth.php';
+require_login();
 
 require_once __DIR__ . '/../../includes/config.php';
+ 
+$allergens = $pdo->query('
+  SELECT
+    "código_who_iuis",
+    "espécie",
+    "nome_comum",
+    "nome_bioquímico",
+    "categoria"
+  FROM "Alergénios"
+  ORDER BY "nome_comum" ASC
+')->fetchAll();
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Alergénios</h1>
 
-  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
-    <p style="margin:0;">Catálogo de alergénios (dados em sessão nesta fase).</p>
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <p style="margin:0;">Lista de alergénios registados no sistema.</p>
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/allergen_create.php">Adicionar alergénio</a>
   </div>
 </section>
@@ -33,6 +37,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <th>Código (WHO/IUIS)</th>
         <th>Espécie</th>
         <th>Nome comum</th>
+        <th>Nome bioquímico</th>
         <th>Categoria</th>
         <th>Ações</th>
       </tr>
@@ -40,14 +45,17 @@ require_once __DIR__ . '/../../includes/header.php';
     <tbody>
       <?php foreach ($allergens as $a): ?>
         <tr>
-          <td><?= htmlspecialchars($a['who_iuis_code']) ?></td>
-          <td><?= htmlspecialchars($a['species']) ?></td>
-          <td><?= htmlspecialchars($a['common_name']) ?></td>
-          <td><?= htmlspecialchars($a['category']) ?></td>
+          <td><?= htmlspecialchars($a['código_who_iuis']) ?></td>
+          <td><?= htmlspecialchars($a['espécie']) ?></td>
+          <td><?= htmlspecialchars($a['nome_comum']) ?></td>
+          <td><?= htmlspecialchars($a['nome_bioquímico'] ?? '—') ?></td>
+          <td><?= htmlspecialchars($a['categoria']) ?></td>
           <td>
             <div class="actions">
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['who_iuis_code']) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/allergen_delete.php?code=<?= urlencode($a['who_iuis_code']) ?>">Apagar</a>
+              <a class="btn btn-soft"
+                 href="<?= $BASE_URL ?>/allergen_edit.php?code=<?= urlencode($a['código_who_iuis']) ?>">Editar</a>
+              <a class="btn btn-danger"
+                 href="<?= $BASE_URL ?>/allergen_delete.php?code=<?= urlencode($a['código_who_iuis']) ?>">Apagar</a>
             </div>
           </td>
         </tr>

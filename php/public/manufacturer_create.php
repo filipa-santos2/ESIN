@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
+function go_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=' . urlencode($msg));
+  exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,44 +20,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email   = trim($_POST['email'] ?? '');
 
   if ($name === '' || $country === '') {
-    header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=Preenche+nome+e+pa%C3%ADs');
-    exit;
+    go_error('Preenche nome e país');
   }
 
-  // Telefone opcional, mas se existir tem de ser telemóvel PT válido
+  // Telefone opcional (mantive a tua regra de telemóvel PT)
   if ($phone !== '' && !preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
-    header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=' . urlencode('Telefone inválido (telemóvel português, ex: 91xxxxxxx)'));
-    exit;
+    go_error('Telefone inválido (telemóvel português, ex: 91xxxxxxx)');
   }
 
-  // UNIQUE(name) (faz sentido para catálogo)
-  foreach ($_SESSION['manufacturers'] as $m) {
-    if (strtolower((string)$m['name']) === strtolower((string)$name)) {
-      header('Location: ' . $BASE_URL . '/manufacturer_create.php?error=J%C3%A1+existe+um+fabricante+com+esse+nome');
-      exit;
-    }
+  // UNIQUE nome (case-insensitive) — em SQLite fazemos validação antes
+  $stmt = $pdo->prepare('SELECT 1 FROM "Fabricantes" WHERE LOWER("nome") = LOWER(?) LIMIT 1');
+  $stmt->execute([$name]);
+  if ($stmt->fetchColumn()) {
+    go_error('Já existe um fabricante com esse nome');
   }
 
-  // gerar novo ID
-  $maxId = 0;
-  foreach ($_SESSION['manufacturers'] as $m) {
-    $maxId = max($maxId, (int)$m['manufacturer_id']);
-  }
-  $newId = $maxId + 1;
+  // Insert
+  $ins = $pdo->prepare('
+    INSERT INTO "Fabricantes" ("nome","país","telefone","email")
+    VALUES (?,?,?,?)
+  ');
+  $ins->execute([
+    $name,
+    $country,
+    ($phone === '' ? null : $phone),
+    ($email === '' ? null : $email),
+  ]);
 
-  $_SESSION['manufacturers'][] = [
-    'manufacturer_id' => $newId,
-    'name' => $name,
-    'country' => $country,
-    'phone' => $phone,
-    'email' => $email,
-  ];
-
-  header('Location: ' . $BASE_URL . '/manufacturers.php?success=Fabricante+adicionado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/manufacturers.php?success=' . urlencode('Fabricante adicionado com sucesso'));
   exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 

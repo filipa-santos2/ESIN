@@ -1,87 +1,72 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-if (!isset($_SESSION['products'])) {
-  $_SESSION['products'] = [
-    [
-      'product_id' => 1,
-      'manufacturer_id' => 1,
-      'name' => 'Acarizax',
-      'type' => 'tablet',
-      'concentration' => '12 SQ-HDM',
-      'unit' => 'tablet',
-      'notes' => 'Exemplo (dados em sessão)',
-    ],
-  ];
-}
+$stmt = $pdo->query('
+  SELECT
+    p."id",
+    p."nome",
+    p."tipo",
+    p."concentração",
+    p."unidade",
+    f."nome" AS fabricante_nome
+  FROM "Produtos" p
+  JOIN "Fabricantes" f ON f."id" = p."fabricante_id"
+  ORDER BY p."id" DESC
+');
+$products = $stmt->fetchAll();
 
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
-}
-
-$products = $_SESSION['products'];
-
-// Mapa manufacturer_id -> name (para mostrar na tabela)
-$manufacturerMap = [];
-foreach ($_SESSION['manufacturers'] as $m) {
-  $manufacturerMap[(int)$m['manufacturer_id']] = (string)$m['name'];
-}
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Produtos</h1>
 
-  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
-    <p style="margin:0;">Lista de produtos (dados em sessão nesta fase).</p>
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <p style="margin:0;">Lista de produtos (SQLite).</p>
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/product_create.php">Adicionar produto</a>
   </div>
-
-  <?php if (empty($_SESSION['manufacturers'])): ?>
-    <div class="msg msg-error" style="margin-top:12px;">
-      Ainda não existem fabricantes. Cria um fabricante primeiro para poderes associar produtos.
-    </div>
-  <?php endif; ?>
 </section>
 
 <section class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Produto</th>
-        <th>Fabricante</th>
-        <th>Tipo</th>
-        <th>Concentração</th>
-        <th>Unidade</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($products as $p): ?>
+  <?php if (empty($products)): ?>
+    <p>Não existem produtos.</p>
+  <?php else: ?>
+    <table>
+      <thead>
         <tr>
-          <td><?= htmlspecialchars($p['name']) ?></td>
-          <td>
-            <?= htmlspecialchars($manufacturerMap[(int)$p['manufacturer_id']] ?? '—') ?>
-          </td>
-          <td><?= htmlspecialchars($p['type']) ?></td>
-          <td><?= htmlspecialchars($p['concentration']) ?></td>
-          <td><?= htmlspecialchars($p['unit']) ?></td>
-          <td>
-            <div class="actions">
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$p['product_id']) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$p['product_id']) ?>">Apagar</a>
-            </div>
-          </td>
+          <th>Nome</th>
+          <th>Tipo</th>
+          <th>Concentração</th>
+          <th>Unidade</th>
+          <th>Fabricante</th>
+          <th>Ações</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach ($products as $p): ?>
+          <tr>
+            <td><?= htmlspecialchars($p['nome']) ?></td>
+            <td><?= htmlspecialchars($p['tipo']) ?></td>
+            <td><?= htmlspecialchars((string)($p['concentração'] ?? '—')) ?></td>
+            <td><?= htmlspecialchars((string)($p['unidade'] ?? '—')) ?></td>
+            <td><?= htmlspecialchars($p['fabricante_nome']) ?></td>
+            <td>
+              <div class="actions">
+                <a class="btn btn-soft" href="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$p['id']) ?>">Editar</a>
+                <a class="btn btn-danger" href="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$p['id']) ?>">Apagar</a>
+              </div>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

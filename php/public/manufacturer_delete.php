@@ -1,42 +1,55 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-$id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/manufacturers.php?error=ID+inv%C3%A1lido');
+function go_list_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/manufacturers.php?error=' . urlencode($msg));
   exit;
 }
 
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) {
+  go_list_error('ID inválido');
 }
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['manufacturers']); $i++) {
-  if ((int)$_SESSION['manufacturers'][$i]['manufacturer_id'] === $id) {
-    $index = $i;
-    break;
+// Confirmar que o fabricante existe
+$stmt = $pdo->prepare('
+  SELECT "id","nome"
+  FROM "Fabricantes"
+  WHERE "id" = ?
+');
+$stmt->execute([$id]);
+$manufacturer = $stmt->fetch();
+
+if (!$manufacturer) {
+  go_list_error('Fabricante não encontrado');
+}
+
+// POST → apagar
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
+    $del = $pdo->prepare('DELETE FROM "Fabricantes" WHERE "id" = ?');
+    $del->execute([$id]);
+
+    header('Location: ' . $BASE_URL . '/manufacturers.php?success=' . urlencode('Fabricante apagado com sucesso'));
+    exit;
+
+  } catch (PDOException $e) {
+    // FK constraint (ex.: produtos associados)
+    if ($e->getCode() === '23000') {
+      go_list_error('Não é possível apagar o fabricante porque existem produtos associados');
+    }
+    // Outro erro inesperado
+    go_list_error('Erro ao apagar fabricante');
   }
 }
 
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/manufacturers.php?error=Fabricante+n%C3%A3o+encontrado');
-  exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  array_splice($_SESSION['manufacturers'], $index, 1);
-  header('Location: ' . $BASE_URL . '/manufacturers.php?success=Fabricante+apagado+com+sucesso');
-  exit;
-}
-
-$manufacturer = $_SESSION['manufacturers'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -45,7 +58,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <p>
     Tens a certeza que queres apagar:
-    <strong><?= htmlspecialchars($manufacturer['name']) ?></strong>?
+    <strong><?= htmlspecialchars($manufacturer['nome']) ?></strong>?
   </p>
 
   <form method="POST" action="<?= $BASE_URL ?>/manufacturer_delete.php?id=<?= urlencode((string)$id) ?>">

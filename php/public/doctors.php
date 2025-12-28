@@ -23,7 +23,7 @@ require_once __DIR__ . '/../../includes/header.php';
   <h1>Médicos</h1>
 
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-    <p style="margin:0;">Lista de médicos registados (SQLite).</p>
+    <p style="margin:0;">Lista de médicos registados.</p>
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/doctors_create.php">Criar médico</a>
   </div>
 </section>

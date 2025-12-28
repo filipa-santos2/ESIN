@@ -1,84 +1,67 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+require_once __DIR__ . '/../../includes/auth.php';
+require_role(['admin','doctor']);
 
-$code = strtoupper(trim($_GET['code'] ?? ''));
-if ($code === '') {
-  header('Location: ' . $BASE_URL . '/diseases.php?error=C%C3%B3digo+inv%C3%A1lido');
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+$codigo = trim($_GET['código'] ?? '');
+if ($codigo === '') {
+  header('Location: ' . $BASE_URL . '/diseases.php?error=' . urlencode('Código inválido'));
   exit;
 }
 
-if (!isset($_SESSION['diseases'])) {
-  $_SESSION['diseases'] = [];
+$stmt = $pdo->prepare('SELECT "código","designação" FROM "Doenças" WHERE "código" = ?');
+$stmt->execute([$codigo]);
+$disease = $stmt->fetch();
+
+if (!$disease) {
+  header('Location: ' . $BASE_URL . '/diseases.php?error=' . urlencode('Doença não encontrada'));
+  exit;
 }
 
-// encontrar índice pelo icd11_code
-$index = null;
-for ($i = 0; $i < count($_SESSION['diseases']); $i++) {
-  if ((string)$_SESSION['diseases'][$i]['icd11_code'] === (string)$code) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/diseases.php?error=Doen%C3%A7a+n%C3%A3o+encontrada');
+function go_error(string $codigo, string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/disease_edit.php?código=' . urlencode($codigo) . '&error=' . urlencode($msg));
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  // Não deixamos editar o código (PK), só o nome
-  $name = trim($_POST['name'] ?? '');
-
-  if ($name === '') {
-    header('Location: ' . $BASE_URL . '/disease_edit.php?code=' . urlencode($code) . '&error=Preenche+o+nome');
-    exit;
+  $designacao = trim($_POST['designação'] ?? '');
+  if ($designacao === '') {
+    go_error($codigo, 'Preenche a designação.');
   }
 
-  // UNIQUE(name) (ignorando o próprio registo)
-  foreach ($_SESSION['diseases'] as $d) {
-    if ((string)$d['icd11_code'] !== (string)$code &&
-        strtolower((string)$d['name']) === strtolower((string)$name)) {
-      header('Location: ' . $BASE_URL . '/disease_edit.php?code=' . urlencode($code) . '&error=J%C3%A1+existe+uma+doen%C3%A7a+com+esse+nome');
-      exit;
-    }
-  }
+  $upd = $pdo->prepare('UPDATE "Doenças" SET "designação" = ? WHERE "código" = ?');
+  $upd->execute([$designacao, $codigo]);
 
-  $_SESSION['diseases'][$index]['name'] = $name;
-
-  header('Location: ' . $BASE_URL . '/diseases.php?success=Doen%C3%A7a+atualizada+com+sucesso');
+  header('Location: ' . $BASE_URL . '/diseases.php?success=' . urlencode('Doença atualizada com sucesso'));
   exit;
 }
 
-$disease = $_SESSION['diseases'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Editar doença</h1>
-  <p><small>Código ICD-11: <?= htmlspecialchars($code) ?></small></p>
+  <p><small>Código: <?= htmlspecialchars($codigo) ?></small></p>
 
   <?php if (!empty($_GET['error'])): ?>
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="<?= $BASE_URL ?>/disease_edit.php?code=<?= urlencode($code) ?>">
+  <form method="POST" action="<?= $BASE_URL ?>/disease_edit.php?código=<?= urlencode($codigo) ?>">
     <div class="field">
-      <label for="icd11_code">Código ICD-11</label>
-      <input id="icd11_code" value="<?= htmlspecialchars($disease['icd11_code']) ?>" disabled>
-      <small>O código é identificador e não é editável.</small>
+      <label>Código</label>
+      <div class="input-like"><?= htmlspecialchars($disease['código']) ?></div>
     </div>
 
     <div class="field">
-      <label for="name">Nome</label>
-      <input id="name" name="name" value="<?= htmlspecialchars($disease['name']) ?>" required>
+      <label for="designação">Designação</label>
+      <input id="designação" name="designação" value="<?= htmlspecialchars($disease['designação']) ?>" required>
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
       <a class="btn" href="<?= $BASE_URL ?>/diseases.php">Cancelar</a>
     </div>

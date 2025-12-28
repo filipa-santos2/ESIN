@@ -1,44 +1,62 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-if (!isset($_SESSION['allergens'])) {
-  $_SESSION['allergens'] = [];
-}
+require_once __DIR__ . '/../../includes/auth.php';
+require_admin(); // ou require_login(), conforme a tua regra
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $who_iuis_code = trim($_POST['who_iuis_code'] ?? '');
-  $species       = trim($_POST['species'] ?? '');
-  $common_name   = trim($_POST['common_name'] ?? '');
-  $category      = trim($_POST['category'] ?? '');
+require_once __DIR__ . '/../../includes/config.php';
 
-  if ($who_iuis_code === '' || $species === '' || $common_name === '' || $category === '') {
-    header('Location: ' . $BASE_URL . '/allergen_create.php?error=Preenche+todos+os+campos');
-    exit;
-  }
 
-  // UNIQUE(who_iuis_code)
-  foreach ($_SESSION['allergens'] as $a) {
-    if ((string)$a['who_iuis_code'] === (string)$who_iuis_code) {
-      header('Location: ' . $BASE_URL . '/allergen_create.php?error=J%C3%A1+existe+um+alerg%C3%A9nio+com+esse+c%C3%B3digo');
-      exit;
-    }
-  }
-
-  $_SESSION['allergens'][] = [
-    'who_iuis_code' => $who_iuis_code,
-    'species' => $species,
-    'common_name' => $common_name,
-    'category' => $category,
-  ];
-
-  header('Location: ' . $BASE_URL . '/allergens.php?success=Alerg%C3%A9nio+adicionado+com+sucesso');
+function go_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/allergen_create.php?error=' . urlencode($msg));
   exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
+/**
+ * Ajusta aqui se a tua BD tiver outros valores permitidos no CHECK.
+ */
+$CATEGORIES = ['mite', 'pollen', 'dander'];
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $code = trim($_POST['código_who_iuis'] ?? '');
+  $species = trim($_POST['espécie'] ?? '');
+  $common = trim($_POST['nome_comum'] ?? '');
+  $biochem = trim($_POST['nome_bioquímico'] ?? '');
+  $category = trim($_POST['categoria'] ?? '');
+
+  if ($code === '' || $species === '' || $common === '' || $category === '') {
+    go_error('Preenche os campos obrigatórios.');
+  }
+
+  if (!in_array($category, $CATEGORIES, true)) {
+    go_error('Categoria inválida.');
+  }
+
+  // Inserir
+  try {
+    $stmt = $pdo->prepare('
+      INSERT INTO "Alergénios" ("código_who_iuis","espécie","nome_comum","nome_bioquímico","categoria")
+      VALUES (:code,:species,:common,:biochem,:category)
+    ');
+    $stmt->execute([
+      ':code' => $code,
+      ':species' => $species,
+      ':common' => $common,
+      ':biochem' => ($biochem === '' ? null : $biochem),
+      ':category' => $category,
+    ]);
+  } catch (PDOException $e) {
+    // PK duplicada, etc.
+    go_error('Não foi possível criar o alergénio. Confirma se o código já existe.');
+  }
+
+  header('Location: ' . $BASE_URL . '/allergens.php?success=' . urlencode('Alergénio criado com sucesso'));
+  exit;
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -51,26 +69,39 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <form method="POST" action="<?= $BASE_URL ?>/allergen_create.php">
     <div class="field">
-      <label for="who_iuis_code">Código WHO/IUIS</label>
-      <input id="who_iuis_code" name="who_iuis_code" placeholder="Ex: t1" required>
+      <label for="código_who_iuis">Código WHO/IUIS</label>
+      <input id="código_who_iuis" name="código_who_iuis" placeholder="Ex: t1, g6" required>
     </div>
 
     <div class="field">
-      <label for="species">Espécie</label>
-      <input id="species" name="species" placeholder="Ex: Dermatophagoides pteronyssinus" required>
+      <label for="espécie">Espécie</label>
+      <input id="espécie" name="espécie" placeholder="Ex: Dermatophagoides pteronyssinus" required>
     </div>
 
     <div class="field">
-      <label for="common_name">Nome comum</label>
-      <input id="common_name" name="common_name" placeholder="Ex: Ácaro do pó" required>
+      <label for="nome_comum">Nome comum</label>
+      <input id="nome_comum" name="nome_comum" placeholder="Ex: Ácaro do pó" required>
     </div>
 
     <div class="field">
-      <label for="category">Categoria</label>
-      <input id="category" name="category" placeholder="Ex: pollen / mite / animal / mold" required>
+      <label for="nome_bioquímico">Nome bioquímico (opcional)</label>
+      <input id="nome_bioquímico" name="nome_bioquímico" placeholder="Ex: Der p 1">
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div class="field">
+      <label for="categoria">Categoria</label>
+      <select id="categoria" name="categoria" required>
+          <option value="mite">ácaros</option>
+          <option value="pollen">pólen</option>
+          <option value="dander">epitélio animal</option> 
+        
+        <?php foreach ($CATEGORIES as $c): ?>
+          <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar</button>
       <a class="btn" href="<?= $BASE_URL ?>/allergens.php">Cancelar</a>
     </div>

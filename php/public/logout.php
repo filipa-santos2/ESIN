@@ -5,9 +5,14 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-unset($_SESSION['user']); // remove só o login (mantém outras sessões, ex: doctors/patients)
+// remover login
+unset($_SESSION['user']);
 
+// remover estado de definição/reset de password (importante)
+unset($_SESSION['pending_set_password']);
+
+// regenerar sessão
 session_regenerate_id(true);
 
-header('Location: ' . $BASE_URL . '/login.php?success=Sess%C3%A3o+terminada');
+header('Location: ' . $BASE_URL . '/login.php?success=' . urlencode('Sessão terminada'));
 exit;

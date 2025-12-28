@@ -1,42 +1,35 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/products.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/products.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-if (!isset($_SESSION['products'])) {
-  $_SESSION['products'] = [];
-}
+$stmt = $pdo->prepare('SELECT "id","nome" FROM "Produtos" WHERE "id" = ?');
+$stmt->execute([$id]);
+$product = $stmt->fetch();
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['products']); $i++) {
-  if ((int)$_SESSION['products'][$i]['product_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/products.php?error=Produto+n%C3%A3o+encontrado');
+if (!$product) {
+  header('Location: ' . $BASE_URL . '/products.php?error=' . urlencode('Produto não encontrado'));
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  array_splice($_SESSION['products'], $index, 1);
-  header('Location: ' . $BASE_URL . '/products.php?success=Produto+apagado+com+sucesso');
+  $del = $pdo->prepare('DELETE FROM "Produtos" WHERE "id" = ?');
+  $del->execute([$id]);
+
+  header('Location: ' . $BASE_URL . '/products.php?success=' . urlencode('Produto apagado com sucesso'));
   exit;
 }
 
-$product = $_SESSION['products'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -45,7 +38,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <p>
     Tens a certeza que queres apagar:
-    <strong><?= htmlspecialchars($product['name']) ?></strong>?
+    <strong><?= htmlspecialchars($product['nome']) ?></strong>?
   </p>
 
   <form method="POST" action="<?= $BASE_URL ?>/product_delete.php?id=<?= urlencode((string)$id) ?>">

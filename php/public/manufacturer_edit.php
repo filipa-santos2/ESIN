@@ -1,31 +1,40 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
+function go_list_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/manufacturers.php?error=' . urlencode($msg));
+  exit;
+}
+
+function go_edit_error(int $id, string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/manufacturer_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+  exit;
+}
+
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/manufacturers.php?error=ID+inv%C3%A1lido');
-  exit;
+  go_list_error('ID inválido');
 }
 
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
-}
+// Buscar fabricante
+$stmt = $pdo->prepare('
+  SELECT "id","nome","país","telefone","email"
+  FROM "Fabricantes"
+  WHERE "id" = ?
+');
+$stmt->execute([$id]);
+$manufacturer = $stmt->fetch();
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['manufacturers']); $i++) {
-  if ((int)$_SESSION['manufacturers'][$i]['manufacturer_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/manufacturers.php?error=Fabricante+n%C3%A3o+encontrado');
-  exit;
+if (!$manufacturer) {
+  go_list_error('Fabricante não encontrado');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,38 +44,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email   = trim($_POST['email'] ?? '');
 
   if ($name === '' || $country === '') {
-    header('Location: ' . $BASE_URL . '/manufacturer_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+nome+e+pa%C3%ADs');
-    exit;
+    go_edit_error($id, 'Preenche nome e país');
   }
 
   // Telefone opcional, mas se existir tem de ser telemóvel PT válido
   if ($phone !== '' && !preg_match('/^(91|92|93|96)\d{7}$/', $phone)) {
-    header('Location: ' . $BASE_URL . '/manufacturer_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode('Telefone inválido (telemóvel português, ex: 91xxxxxxx)'));
-    exit;
+    go_edit_error($id, 'Telefone inválido (telemóvel português, ex: 91xxxxxxx)');
   }
 
-
-  // UNIQUE(name) (ignorando o próprio)
-  foreach ($_SESSION['manufacturers'] as $m) {
-    if ((int)$m['manufacturer_id'] !== $id &&
-        strtolower((string)$m['name']) === strtolower((string)$name)) {
-      header('Location: ' . $BASE_URL . '/manufacturer_edit.php?id=' . urlencode((string)$id) . '&error=J%C3%A1+existe+um+fabricante+com+esse+nome');
-      exit;
-    }
+  // UNIQUE(nome) ignorando o próprio (case-insensitive)
+  $dupe = $pdo->prepare('
+    SELECT 1
+    FROM "Fabricantes"
+    WHERE LOWER("nome") = LOWER(?)
+      AND "id" <> ?
+    LIMIT 1
+  ');
+  $dupe->execute([$name, $id]);
+  if ($dupe->fetchColumn()) {
+    go_edit_error($id, 'Já existe um fabricante com esse nome');
   }
 
-  $_SESSION['manufacturers'][$index]['name'] = $name;
-  $_SESSION['manufacturers'][$index]['country'] = $country;
-  $_SESSION['manufacturers'][$index]['phone'] = $phone;
-  $_SESSION['manufacturers'][$index]['email'] = $email;
+  // Update
+  $upd = $pdo->prepare('
+    UPDATE "Fabricantes"
+    SET "nome" = ?, "país" = ?, "telefone" = ?, "email" = ?
+    WHERE "id" = ?
+  ');
+  $upd->execute([
+    $name,
+    $country,
+    ($phone === '' ? null : $phone),
+    ($email === '' ? null : $email),
+    $id,
+  ]);
 
-  header('Location: ' . $BASE_URL . '/manufacturers.php?success=Fabricante+atualizado+com+sucesso');
+  header('Location: ' . $BASE_URL . '/manufacturers.php?success=' . urlencode('Fabricante atualizado com sucesso'));
   exit;
 }
 
-$manufacturer = $_SESSION['manufacturers'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -81,12 +97,12 @@ require_once __DIR__ . '/../../includes/header.php';
   <form method="POST" action="<?= $BASE_URL ?>/manufacturer_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="name">Nome</label>
-      <input id="name" name="name" value="<?= htmlspecialchars($manufacturer['name']) ?>" required>
+      <input id="name" name="name" value="<?= htmlspecialchars($manufacturer['nome'] ?? '') ?>" required>
     </div>
 
     <div class="field">
       <label for="country">País</label>
-      <input id="country" name="country" value="<?= htmlspecialchars($manufacturer['country']) ?>" required>
+      <input id="country" name="country" value="<?= htmlspecialchars($manufacturer['país'] ?? '') ?>" required>
     </div>
 
     <div class="field">
@@ -95,7 +111,7 @@ require_once __DIR__ . '/../../includes/header.php';
         id="phone"
         name="phone"
         type="tel"
-        value="<?= htmlspecialchars($manufacturer['phone']) ?>"
+        value="<?= htmlspecialchars($manufacturer['telefone'] ?? '') ?>"
         inputmode="numeric"
         autocomplete="tel"
         pattern="^(91|92|93|96)[0-9]{7}$"
@@ -107,7 +123,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="field">
       <label for="email">Email</label>
-      <input id="email" name="email" type="email" value="<?= htmlspecialchars($manufacturer['email']) ?>">
+      <input id="email" name="email" type="email" value="<?= htmlspecialchars($manufacturer['email'] ?? '') ?>">
     </div>
 
     <div style="display:flex; gap:10px;">

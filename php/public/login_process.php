@@ -11,10 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $email = trim($_POST['email'] ?? '');
-$password = $_POST['password'] ?? '';
+$password = (string)($_POST['password'] ?? '');
 
 if ($email === '' || $password === '') {
-  header('Location: ' . $BASE_URL . '/login.php?error=Preenche+o+e-mail+e+a+senha');
+  header('Location: ' . $BASE_URL . '/login.php?error=' . urlencode('Preenche o e-mail e a senha'));
   exit;
 }
 
@@ -30,54 +30,53 @@ if (strtolower($email) === strtolower($admin_email) && password_verify($password
     'email'     => $admin_email,
     'role'      => 'admin',
   ];
-  header('Location: ' . $BASE_URL . '/index.php?success=Bem-vindo');
+  header('Location: ' . $BASE_URL . '/index.php?success=' . urlencode('Bem-vindo'));
   exit;
 }
 
-// Garantir lista de doctors
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [];
-}
+// --- DOCTOR via SQLite ---
+$stmt = $pdo->prepare('
+  SELECT "id","nome_completo","email","password_hash"
+  FROM "Médicos"
+  WHERE LOWER("email") = LOWER(?)
+  LIMIT 1
+');
+$stmt->execute([$email]);
+$found = $stmt->fetch();
 
-// Procurar médico por email
-$found = null;
-foreach ($_SESSION['doctors'] as $d) {
-  if (!empty($d['email']) && strtolower($d['email']) === strtolower($email)) {
-    $found = $d;
-    break;
-  }
-}
-
-// Se não existe médico com esse email
 if (!$found) {
-  header('Location: ' . $BASE_URL . '/login.php?error=E-mail+ou+senha+incorretos');
+  header('Location: ' . $BASE_URL . '/login.php?error=' . urlencode('E-mail ou senha incorretos'));
   exit;
 }
 
 // Se é primeiro acesso (sem password definida)
 if (empty($found['password_hash'])) {
-  header(
-    'Location: ' . $BASE_URL .
-    '/reset.php?email=' . urlencode($email) .
-    '&info=Primeiro+acesso:+defina+uma+password'
-  );
+  // guardar quem vai definir password (mais seguro do que passar email no URL)
+  $_SESSION['pending_set_password'] = [
+    'doctor_id' => (int)$found['id'],
+    'email'     => (string)$found['email'],
+    'full_name' => (string)$found['nome_completo'],
+    'role'      => 'doctor',
+  ];
+
+  header('Location: ' . $BASE_URL . '/reset.php?info=' . urlencode('Primeiro acesso: define uma password'));
   exit;
 }
 
 // Validar password normal
-if (!password_verify($password, $found['password_hash'])) {
-  header('Location: ' . $BASE_URL . '/login.php?error=E-mail+ou+senha+incorretos');
+if (!password_verify($password, (string)$found['password_hash'])) {
+  header('Location: ' . $BASE_URL . '/login.php?error=' . urlencode('E-mail ou senha incorretos'));
   exit;
 }
 
 // Login OK
 session_regenerate_id(true);
 $_SESSION['user'] = [
-  'doctor_id' => (int)($found['doctor_id'] ?? 0),
-  'full_name' => $found['full_name'] ?? 'Médico',
-  'email'     => $found['email'] ?? $email,
+  'doctor_id' => (int)$found['id'],
+  'full_name' => (string)$found['nome_completo'],
+  'email'     => (string)$found['email'],
   'role'      => 'doctor',
 ];
 
-header('Location: ' . $BASE_URL . '/index.php?success=Bem-vindo');
+header('Location: ' . $BASE_URL . '/index.php?success=' . urlencode('Bem-vindo'));
 exit;

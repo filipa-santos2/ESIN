@@ -1,75 +1,68 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/products.php?error=ID+inv%C3%A1lido');
+  header('Location: ' . $BASE_URL . '/products.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-if (!isset($_SESSION['products'])) {
-  $_SESSION['products'] = [];
-}
-if (!isset($_SESSION['manufacturers'])) {
-  $_SESSION['manufacturers'] = [];
+$productStmt = $pdo->prepare('SELECT * FROM "Produtos" WHERE "id" = ?');
+$productStmt->execute([$id]);
+$product = $productStmt->fetch();
+
+if (!$product) {
+  header('Location: ' . $BASE_URL . '/products.php?error=' . urlencode('Produto não encontrado'));
+  exit;
 }
 
-$index = null;
-for ($i = 0; $i < count($_SESSION['products']); $i++) {
-  if ((int)$_SESSION['products'][$i]['product_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
+$fabricantes = $pdo->query('SELECT "id","nome" FROM "Fabricantes" ORDER BY "nome"')->fetchAll();
 
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/products.php?error=Produto+n%C3%A3o+encontrado');
+function go_error(int $id, string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/product_edit.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
   exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $manufacturer_id = (int)($_POST['manufacturer_id'] ?? 0);
-  $name = trim($_POST['name'] ?? '');
-  $type = trim($_POST['type'] ?? '');
-  $concentration = trim($_POST['concentration'] ?? '');
-  $unit = trim($_POST['unit'] ?? '');
-  $notes = trim($_POST['notes'] ?? '');
+  $fabricante_id = (int)($_POST['fabricante_id'] ?? 0);
+  $nome = trim($_POST['nome'] ?? '');
+  $tipo = trim($_POST['tipo'] ?? '');
+  $conc_raw = trim($_POST['concentração'] ?? '');
+  $unidade = trim($_POST['unidade'] ?? '');
 
-  if ($manufacturer_id <= 0 || $name === '' || $type === '' || $concentration === '' || $unit === '') {
-    header('Location: ' . $BASE_URL . '/product_edit.php?id=' . urlencode((string)$id) . '&error=Preenche+todos+os+campos+obrigat%C3%B3rios');
-    exit;
+  if ($fabricante_id <= 0 || $nome === '' || $tipo === '') {
+    go_error($id, 'Preenche os campos obrigatórios (nome, tipo, fabricante).');
   }
 
-  $manufacturerExists = false;
-  foreach ($_SESSION['manufacturers'] as $m) {
-    if ((int)$m['manufacturer_id'] === $manufacturer_id) {
-      $manufacturerExists = true;
-      break;
-    }
-  }
-  if (!$manufacturerExists) {
-    header('Location: ' . $BASE_URL . '/product_edit.php?id=' . urlencode((string)$id) . '&error=Fabricante+inv%C3%A1lido');
-    exit;
+  $concentracao = null;
+  if ($conc_raw !== '') {
+    $concentracao = (float)str_replace(',', '.', $conc_raw);
   }
 
-  $_SESSION['products'][$index]['manufacturer_id'] = $manufacturer_id;
-  $_SESSION['products'][$index]['name'] = $name;
-  $_SESSION['products'][$index]['type'] = $type;
-  $_SESSION['products'][$index]['concentration'] = $concentration;
-  $_SESSION['products'][$index]['unit'] = $unit;
-  $_SESSION['products'][$index]['notes'] = $notes;
+  $chk = $pdo->prepare('SELECT 1 FROM "Fabricantes" WHERE "id" = ?');
+  $chk->execute([$fabricante_id]);
+  if (!$chk->fetchColumn()) {
+    go_error($id, 'Fabricante inválido.');
+  }
 
-  header('Location: ' . $BASE_URL . '/products.php?success=Produto+atualizado+com+sucesso');
+  $upd = $pdo->prepare('
+    UPDATE "Produtos"
+    SET "nome"=?, "tipo"=?, "concentração"=?, "unidade"=?, "fabricante_id"=?
+    WHERE "id"=?
+  ');
+  $upd->execute([$nome, $tipo, $concentracao, ($unidade === '' ? null : $unidade), $fabricante_id, $id]);
+
+  header('Location: ' . $BASE_URL . '/products.php?success=' . urlencode('Produto atualizado com sucesso'));
   exit;
 }
 
-$product = $_SESSION['products'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -83,43 +76,39 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <form method="POST" action="<?= $BASE_URL ?>/product_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
-      <label for="manufacturer_id">Fabricante</label>
-      <select id="manufacturer_id" name="manufacturer_id" required>
-        <?php foreach ($_SESSION['manufacturers'] as $m): ?>
-          <option value="<?= htmlspecialchars((string)$m['manufacturer_id']) ?>"
-            <?= ((int)$m['manufacturer_id'] === (int)$product['manufacturer_id']) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($m['name']) ?>
+      <label for="fabricante_id">Fabricante</label>
+      <select id="fabricante_id" name="fabricante_id" required>
+        <?php foreach ($fabricantes as $f): ?>
+          <option value="<?= htmlspecialchars((string)$f['id']) ?>"
+            <?= ((int)$f['id'] === (int)$product['fabricante_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($f['nome']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="field">
-      <label for="name">Nome do produto</label>
-      <input id="name" name="name" value="<?= htmlspecialchars($product['name']) ?>" required>
+      <label for="nome">Nome</label>
+      <input id="nome" name="nome" value="<?= htmlspecialchars($product['nome']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="type">Tipo</label>
-      <input id="type" name="type" value="<?= htmlspecialchars($product['type']) ?>" required>
+      <label for="tipo">Tipo</label>
+      <input id="tipo" name="tipo" value="<?= htmlspecialchars($product['tipo']) ?>" required>
     </div>
 
     <div class="field">
-      <label for="concentration">Concentração</label>
-      <input id="concentration" name="concentration" value="<?= htmlspecialchars($product['concentration']) ?>" required>
+      <label for="concentração">Concentração (opcional)</label>
+      <input id="concentração" name="concentração"
+             value="<?= htmlspecialchars((string)($product['concentração'] ?? '')) ?>">
     </div>
 
     <div class="field">
-      <label for="unit">Unidade</label>
-      <input id="unit" name="unit" value="<?= htmlspecialchars($product['unit']) ?>" required>
+      <label for="unidade">Unidade (opcional)</label>
+      <input id="unidade" name="unidade" value="<?= htmlspecialchars((string)($product['unidade'] ?? '')) ?>">
     </div>
 
-    <div class="field">
-      <label for="notes">Notas (opcional)</label>
-      <textarea id="notes" name="notes" rows="3"><?= htmlspecialchars($product['notes']) ?></textarea>
-    </div>
-
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
       <a class="btn" href="<?= $BASE_URL ?>/products.php">Cancelar</a>
     </div>

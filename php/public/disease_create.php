@@ -1,48 +1,38 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+require_once __DIR__ . '/../../includes/auth.php';
+require_role(['admin','doctor']);
 
-if (!isset($_SESSION['diseases'])) {
-  $_SESSION['diseases'] = [];
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $icd11_code = strtoupper(trim($_POST['icd11_code'] ?? ''));
-  $name       = trim($_POST['name'] ?? '');
-
-  if ($icd11_code === '' || $name === '') {
-    header('Location: ' . $BASE_URL . '/disease_create.php?error=Preenche+c%C3%B3digo+e+nome');
-    exit;
-  }
-
-  // UNIQUE(icd11_code)
-  foreach ($_SESSION['diseases'] as $d) {
-    if ((string)$d['icd11_code'] === (string)$icd11_code) {
-      header('Location: ' . $BASE_URL . '/disease_create.php?error=J%C3%A1+existe+uma+doen%C3%A7a+com+esse+c%C3%B3digo');
-      exit;
-    }
-  }
-
-  // UNIQUE(name) (como no teu modelo)
-  foreach ($_SESSION['diseases'] as $d) {
-    if (strtolower((string)$d['name']) === strtolower((string)$name)) {
-      header('Location: ' . $BASE_URL . '/disease_create.php?error=J%C3%A1+existe+uma+doen%C3%A7a+com+esse+nome');
-      exit;
-    }
-  }
-
-  $_SESSION['diseases'][] = [
-    'icd11_code' => $icd11_code,
-    'name' => $name,
-  ];
-
-  header('Location: ' . $BASE_URL . '/diseases.php?success=Doen%C3%A7a+adicionada+com+sucesso');
+function go_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/disease_create.php?error=' . urlencode($msg));
   exit;
 }
 
-require_once __DIR__ . '/../../includes/config.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $codigo = trim($_POST['código'] ?? '');
+  $designacao = trim($_POST['designação'] ?? '');
+
+  if ($codigo === '' || $designacao === '') {
+    go_error('Preenche código e designação.');
+  }
+
+  // PK único
+  $chk = $pdo->prepare('SELECT 1 FROM "Doenças" WHERE "código" = ?');
+  $chk->execute([$codigo]);
+  if ($chk->fetchColumn()) {
+    go_error('Já existe uma doença com esse código.');
+  }
+
+  $ins = $pdo->prepare('INSERT INTO "Doenças" ("código","designação") VALUES (?,?)');
+  $ins->execute([$codigo, $designacao]);
+
+  header('Location: ' . $BASE_URL . '/diseases.php?success=' . urlencode('Doença adicionada com sucesso'));
+  exit;
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -55,16 +45,16 @@ require_once __DIR__ . '/../../includes/header.php';
 
   <form method="POST" action="<?= $BASE_URL ?>/disease_create.php">
     <div class="field">
-      <label for="icd11_code">Código ICD-11</label>
-      <input id="icd11_code" name="icd11_code" placeholder="Ex: CA23" required>
+      <label for="código">Código</label>
+      <input id="código" name="código" required>
     </div>
 
     <div class="field">
-      <label for="name">Nome</label>
-      <input id="name" name="name" placeholder="Ex: Asma" required>
+      <label for="designação">Designação</label>
+      <input id="designação" name="designação" required>
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-primary" type="submit">Guardar</button>
       <a class="btn" href="<?= $BASE_URL ?>/diseases.php">Cancelar</a>
     </div>
