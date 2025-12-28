@@ -1,69 +1,70 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-// Garantir sessão (mesmo que o header já faça isto, não custa)
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
+
+require_once __DIR__ . '/../../includes/auth.php';
+require_admin();
+
+try {
+  $stmt = $pdo->query('
+    SELECT "id","nome_completo","num_ordem","especialidade","telefone","email","password_hash"
+    FROM "Médicos"
+    ORDER BY "nome_completo"
+  ');
+  $doctors = $stmt->fetchAll();
+} catch (Throwable $e) {
+  header('Location: ' . $BASE_URL . '/index.php?error=' . urlencode('Erro a carregar médicos: ' . $e->getMessage()));
+  exit;
 }
 
-// Lista inicial (fake) só na 1ª vez
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [
-    ['doctor_id' => 1, 'full_name' => 'Dra. Ana Lima', 'license_no' => '12345', 'specialty' => 'Imunoalergologia', 'phone' => '912000111', 'email' => 'ana.lima@exemplo.pt'],
-    ['doctor_id' => 2, 'full_name' => 'Dr. Rui Costa', 'license_no' => '67890', 'specialty' => 'Medicina Geral', 'phone' => '913222333', 'email' => 'rui.costa@exemplo.pt'],
-  ];
-}
-
-$doctors = $_SESSION['doctors'];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Médicos</h1>
 
-  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
-    <p style="margin:0;">Lista de médicos registados no sistema.</p>
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <p style="margin:0;">Lista de médicos registados (SQLite).</p>
     <a class="btn btn-primary" href="<?= $BASE_URL ?>/doctors_create.php">Criar médico</a>
   </div>
 </section>
 
 <section class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>Número de ordem</th>
-        <th>Especialidade</th>
-        <th>Telefone</th>
-        <th>Email</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($doctors as $d): ?>
+  <?php if (empty($doctors)): ?>
+    <p>Sem médicos registados.</p>
+  <?php else: ?>
+    <table>
+      <thead>
         <tr>
-          <td><?= htmlspecialchars($d['full_name']) ?></td>
-          <td><?= htmlspecialchars($d['license_no']) ?></td>
-          <td><?= htmlspecialchars($d['specialty']) ?></td>
-          <td><?= htmlspecialchars($d['phone']) ?></td>
-          <td>
-            <?php
-              $email = htmlspecialchars($d['email'], ENT_QUOTES, 'UTF-8');
-              $email = str_replace(['@', '.'], ['<wbr>@', '<wbr>.'], $email);
-              echo $email;
-            ?>
-          </td>          
-          <td> 
-            <div class="actions">
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode($d['doctor_id']) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode($d['doctor_id']) ?>">Apagar</a>
-            </div>
-          </td>
+          <th>Nome</th>
+          <th>Número de ordem</th>
+          <th>Especialidade</th>
+          <th>Telefone</th>
+          <th>Email</th>
+          <th>Conta</th>
+          <th>Ações</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach ($doctors as $d): ?>
+          <?php $hasPassword = !empty($d['password_hash']); ?>
+          <tr>
+            <td><?= htmlspecialchars($d['nome_completo']) ?></td>
+            <td><?= htmlspecialchars($d['num_ordem']) ?></td>
+            <td><?= htmlspecialchars($d['especialidade']) ?></td>
+            <td><?= htmlspecialchars($d['telefone'] ?? '') ?></td>
+            <td><?= htmlspecialchars($d['email'] ?? '') ?></td>
+            <td>
+              <?= $hasPassword ? 'Password definida' : 'Primeiro acesso pendente' ?>
+            </td>
+            <td style="display:flex; gap:8px; flex-wrap:wrap;">
+              <a class="btn" href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode((string)$d['id']) ?>">Editar</a>
+              <a class="btn btn-danger" href="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode((string)$d['id']) ?>">Apagar</a>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -1,106 +1,104 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
-
 require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
 
+function go_list_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/doctors.php?error=' . urlencode($msg));
+  exit;
+}
+
+function go_self(int $id, string $key, string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/doctors_edit.php?id=' . urlencode((string)$id) . '&' . $key . '=' . urlencode($msg));
+  exit;
+}
+
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
-  header('Location: ' . $BASE_URL . '/doctors.php?error=ID+inv%C3%A1lido');
-  exit;
+  go_list_error('ID inválido');
 }
 
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [];
-}
+try {
+  $stmt = $pdo->prepare('
+    SELECT "id","nome_completo","num_ordem","especialidade","telefone","email","password_hash"
+    FROM "Médicos"
+    WHERE "id" = ?
+  ');
+  $stmt->execute([$id]);
+  $doctor = $stmt->fetch();
 
-// Procurar médico pelo id
-$index = null;
-for ($i = 0; $i < count($_SESSION['doctors']); $i++) {
-  if ((int)($_SESSION['doctors'][$i]['doctor_id'] ?? 0) === $id) {
-    $index = $i;
-    break;
+  if (!$doctor) {
+    go_list_error('Médico não encontrado');
   }
-}
 
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/doctors.php?error=M%C3%A9dico+n%C3%A3o+encontrado');
-  exit;
-}
+  // Ação: repor password (força primeiro acesso)
+  if (isset($_GET['action']) && $_GET['action'] === 'reset_password') {
+    $rst = $pdo->prepare('UPDATE "Médicos" SET "password_hash" = NULL WHERE "id" = ?');
+    $rst->execute([$id]);
 
-// Referência ao médico atual
-$doctor = $_SESSION['doctors'][$index];
+    go_self($id, 'success', 'Password reposta. O médico deve definir uma nova password no primeiro acesso');
+  }
 
-// Ação: repor password (força primeiro acesso)
-if (isset($_GET['action']) && $_GET['action'] === 'reset_password') {
-  $_SESSION['doctors'][$index]['password_hash'] = null;
+  // POST: guardar alterações
+  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $full_name  = trim($_POST['full_name'] ?? '');
+    $license_no = trim($_POST['license_no'] ?? '');
+    $specialty  = trim($_POST['specialty'] ?? '');
+    $phone      = trim($_POST['phone'] ?? '');
+    $email      = trim($_POST['email'] ?? '');
 
-  header(
-    'Location: ' . $BASE_URL .
-    '/doctors_edit.php?id=' . urlencode((string)$id) .
-    '&success=Password+reposta.+O+m%C3%A9dico+deve+definir+uma+nova+password+no+primeiro+acesso'
-  );
-  exit;
-}
+    if ($full_name === '' || $license_no === '' || $specialty === '' || $email === '') {
+      go_self($id, 'error', 'Preenche nome, número de ordem, especialidade e email');
+    }
 
-// POST: guardar alterações
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $full_name  = trim($_POST['full_name'] ?? '');
-  $license_no = trim($_POST['license_no'] ?? '');
-  $specialty  = trim($_POST['specialty'] ?? '');
-  $phone      = trim($_POST['phone'] ?? '');
-  $email      = trim($_POST['email'] ?? '');
+    // duplicado por num_ordem (ignorando o próprio)
+    $chk1 = $pdo->prepare('SELECT 1 FROM "Médicos" WHERE "num_ordem" = ? AND "id" <> ? LIMIT 1');
+    $chk1->execute([$license_no, $id]);
+    if ($chk1->fetchColumn()) {
+      go_self($id, 'error', 'Já existe um médico com esse número de ordem');
+    }
 
-  if ($full_name === '' || $license_no === '' || $specialty === '' || $email === '') {
-    header(
-      'Location: ' . $BASE_URL .
-      '/doctors_edit.php?id=' . urlencode((string)$id) .
-      '&error=Preenche+nome,+n%C3%BAmero+de+ordem,+especialidade+e+email'
-    );
+    // duplicado por email (case-insensitive) ignorando o próprio
+    $chk2 = $pdo->prepare('SELECT 1 FROM "Médicos" WHERE LOWER("email") = LOWER(?) AND "id" <> ? LIMIT 1');
+    $chk2->execute([$email, $id]);
+    if ($chk2->fetchColumn()) {
+      go_self($id, 'error', 'Já existe um médico com esse email');
+    }
+
+    // atualizar (sem mexer na password)
+    $upd = $pdo->prepare('
+      UPDATE "Médicos"
+      SET "nome_completo" = ?,
+          "num_ordem"     = ?,
+          "especialidade" = ?,
+          "telefone"      = ?,
+          "email"         = ?
+      WHERE "id" = ?
+    ');
+    $upd->execute([
+      $full_name,
+      $license_no,
+      $specialty,
+      ($phone === '' ? null : $phone),
+      $email,
+      $id
+    ]);
+
+    header('Location: ' . $BASE_URL . '/doctors.php?success=' . urlencode('Médico atualizado com sucesso'));
     exit;
   }
 
-  // Validar duplicados (license_no e email) ignorando o próprio
-  foreach ($_SESSION['doctors'] as $d) {
-    $otherId = (int)($d['doctor_id'] ?? 0);
+  // voltar a buscar (para refletir reset ou alterações)
+  $stmt->execute([$id]);
+  $doctor = $stmt->fetch();
+  $hasPassword = !empty($doctor['password_hash']);
 
-    if ($otherId !== $id && (string)($d['license_no'] ?? '') === (string)$license_no) {
-      header(
-        'Location: ' . $BASE_URL .
-        '/doctors_edit.php?id=' . urlencode((string)$id) .
-        '&error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem'
-      );
-      exit;
-    }
-
-    if ($otherId !== $id && !empty($d['email']) && strtolower($d['email']) === strtolower($email)) {
-      header(
-        'Location: ' . $BASE_URL .
-        '/doctors_edit.php?id=' . urlencode((string)$id) .
-        '&error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+email'
-      );
-      exit;
-    }
-  }
-
-  // Atualizar (não mexe na password aqui)
-  $_SESSION['doctors'][$index]['full_name']  = $full_name;
-  $_SESSION['doctors'][$index]['license_no'] = $license_no;
-  $_SESSION['doctors'][$index]['specialty']  = $specialty;
-  $_SESSION['doctors'][$index]['phone']      = $phone;
-  $_SESSION['doctors'][$index]['email']      = $email;
-
-  header('Location: ' . $BASE_URL . '/doctors.php?success=M%C3%A9dico+atualizado+com+sucesso');
-  exit;
+} catch (Throwable $e) {
+  go_list_error('Erro: ' . $e->getMessage());
 }
-
-// GET: valores atuais (após possíveis mudanças)
-$doctor = $_SESSION['doctors'][$index];
-$hasPassword = !empty($doctor['password_hash']);
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -125,22 +123,22 @@ require_once __DIR__ . '/../../includes/header.php';
   <form method="POST" action="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode((string)$id) ?>">
     <div class="field">
       <label for="full_name">Nome completo</label>
-      <input id="full_name" name="full_name" value="<?= htmlspecialchars($doctor['full_name'] ?? '') ?>" required>
+      <input id="full_name" name="full_name" value="<?= htmlspecialchars($doctor['nome_completo'] ?? '') ?>" required>
     </div>
 
     <div class="field">
       <label for="license_no">Número de ordem</label>
-      <input id="license_no" name="license_no" value="<?= htmlspecialchars($doctor['license_no'] ?? '') ?>" required>
+      <input id="license_no" name="license_no" value="<?= htmlspecialchars($doctor['num_ordem'] ?? '') ?>" required>
     </div>
 
     <div class="field">
       <label for="specialty">Especialidade</label>
-      <input id="specialty" name="specialty" value="<?= htmlspecialchars($doctor['specialty'] ?? '') ?>" required>
+      <input id="specialty" name="specialty" value="<?= htmlspecialchars($doctor['especialidade'] ?? '') ?>" required>
     </div>
 
     <div class="field">
       <label for="phone">Telefone</label>
-      <input id="phone" name="phone" value="<?= htmlspecialchars($doctor['phone'] ?? '') ?>">
+      <input id="phone" name="phone" value="<?= htmlspecialchars($doctor['telefone'] ?? '') ?>">
     </div>
 
     <div class="field">
@@ -152,7 +150,6 @@ require_once __DIR__ . '/../../includes/header.php';
       <button class="btn btn-primary" type="submit">Guardar alterações</button>
       <a class="btn" href="<?= $BASE_URL ?>/doctors.php">Cancelar</a>
 
-      <!-- Repor password (força primeiro acesso) -->
       <a class="btn"
          href="<?= $BASE_URL ?>/doctors_edit.php?id=<?= urlencode((string)$id) ?>&action=reset_password"
          onclick="return confirm('Repor password? O médico terá de definir uma nova password no próximo login.');">

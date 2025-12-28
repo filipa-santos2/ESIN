@@ -1,63 +1,57 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
 
 require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <=
- 0) {
-  header('Location: ' . $BASE_URL . '/doctors.php?error=ID+inv%C3%A1lido');
+if ($id <= 0) {
+  header('Location: ' . $BASE_URL . '/doctors.php?error=' . urlencode('ID inválido'));
   exit;
 }
 
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [];
-}
+// buscar médico (para mostrar no ecrã)
+$stmt = $pdo->prepare('SELECT "id","nome_completo","num_ordem" FROM "Médicos" WHERE "id" = ?');
+$stmt->execute([$id]);
+$doctor = $stmt->fetch();
 
-// encontrar índice
-$index = null;
-for ($i = 0; $i < count($_SESSION['doctors']); $i++) {
-  if ((int)$_SESSION['doctors'][$i]['doctor_id'] === $id) {
-    $index = $i;
-    break;
-  }
-}
-
-if ($index === null) {
-  header('Location: ' . $BASE_URL . '/doctors.php?error=M%C3%A9dico+n%C3%A3o+encontrado');
+if (!$doctor) {
+  header('Location: ' . $BASE_URL . '/doctors.php?error=' . urlencode('Médico não encontrado'));
   exit;
 }
 
 // POST: apagar
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  array_splice($_SESSION['doctors'], $index, 1);
-  header('Location: ' . $BASE_URL . '/doctors.php?success=M%C3%A9dico+apagado+com+sucesso');
-  exit;
+  try {
+    $del = $pdo->prepare('DELETE FROM "Médicos" WHERE "id" = ?');
+    $del->execute([$id]);
+
+    header('Location: ' . $BASE_URL . '/doctors.php?success=' . urlencode('Médico apagado com sucesso'));
+    exit;
+
+  } catch (Throwable $e) {
+    // muito comum: FK (visitas/planos associados)
+    $msg = 'Não foi possível apagar: este médico tem registos associados (ex.: visitas/planos).';
+    header('Location: ' . $BASE_URL . '/doctor_delete.php?id=' . urlencode((string)$id) . '&error=' . urlencode($msg));
+    exit;
+  }
 }
 
-// GET: mostrar confirmação
-$doctor = $_SESSION['doctors'][$index];
-
-require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <section class="card">
   <h1>Apagar médico</h1>
 
-  <p>
-    Tens a certeza que queres apagar:
-    <strong><?= htmlspecialchars($doctor['full_name']) ?></strong>
-    (Nº ordem <?= htmlspecialchars($doctor['license_no']) ?>)?
-  </p>
-
   <?php if (!empty($_GET['error'])): ?>
     <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
   <?php endif; ?>
+
+  <p>
+    Tens a certeza que queres apagar:
+    <strong><?= htmlspecialchars($doctor['nome_completo']) ?></strong>
+    (Nº ordem <?= htmlspecialchars($doctor['num_ordem']) ?>)?
+  </p>
 
   <form method="POST" action="<?= $BASE_URL ?>/doctor_delete.php?id=<?= urlencode((string)$id) ?>">
     <div style="display:flex; gap:10px;">

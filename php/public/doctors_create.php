@@ -1,19 +1,15 @@
 <?php
 require_once __DIR__ . '/../../includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
-
 require_once __DIR__ . '/../../includes/auth.php';
 require_admin();
 
-// Inicializar lista de doctors na sessão (se ainda não existir)
-if (!isset($_SESSION['doctors'])) {
-  $_SESSION['doctors'] = [];
+function go_error(string $msg): void {
+  global $BASE_URL;
+  header('Location: ' . $BASE_URL . '/doctors_create.php?error=' . urlencode($msg));
+  exit;
 }
 
-// Se o form foi submetido, processar POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $full_name  = trim($_POST['full_name'] ?? '');
   $license_no = trim($_POST['license_no'] ?? '');
@@ -21,44 +17,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $phone      = trim($_POST['phone'] ?? '');
   $email      = trim($_POST['email'] ?? '');
 
-  // Validação mínima
   if ($full_name === '' || $license_no === '' || $specialty === '' || $email === '') {
-    header('Location: ' . $BASE_URL . '/doctors_create.php?error=Preenche+nome,+n%C3%BAmero+de+ordem,+especialidade+e+email');
+    go_error('Preenche nome, número de ordem, especialidade e email');
+  }
+
+  try {
+    // duplicado por num_ordem
+    $chk1 = $pdo->prepare('SELECT 1 FROM "Médicos" WHERE "num_ordem" = ? LIMIT 1');
+    $chk1->execute([$license_no]);
+    if ($chk1->fetchColumn()) {
+      go_error('Já existe um médico com esse número de ordem');
+    }
+
+    // duplicado por email (case-insensitive)
+    $chk2 = $pdo->prepare('SELECT 1 FROM "Médicos" WHERE LOWER("email") = LOWER(?) LIMIT 1');
+    $chk2->execute([$email]);
+    if ($chk2->fetchColumn()) {
+      go_error('Já existe um médico com esse email');
+    }
+
+    // inserir com password_hash NULL (definida no primeiro acesso)
+    $ins = $pdo->prepare('
+      INSERT INTO "Médicos" ("nome_completo","num_ordem","especialidade","telefone","email","password_hash")
+      VALUES (?,?,?,?,?,NULL)
+    ');
+    $ins->execute([
+      $full_name,
+      $license_no,
+      $specialty,
+      ($phone === '' ? null : $phone),
+      $email
+    ]);
+
+    header('Location: ' . $BASE_URL . '/doctors.php?success=' . urlencode('Médico criado. A password é definida no primeiro acesso'));
     exit;
+
+  } catch (Throwable $e) {
+    go_error('Erro ao criar médico: ' . $e->getMessage());
   }
-
-  // Validar duplicados (license_no e email)
-  foreach ($_SESSION['doctors'] as $d) {
-    if ((string)($d['license_no'] ?? '') === (string)$license_no) {
-      header('Location: ' . $BASE_URL . '/doctors_create.php?error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+n%C3%BAmero+de+ordem');
-      exit;
-    }
-    if (!empty($d['email']) && strtolower($d['email']) === strtolower($email)) {
-      header('Location: ' . $BASE_URL . '/doctors_create.php?error=J%C3%A1+existe+um+m%C3%A9dico+com+esse+email');
-      exit;
-    }
-  }
-
-  // Gerar novo ID
-  $maxId = 0;
-  foreach ($_SESSION['doctors'] as $d) {
-    $maxId = max($maxId, (int)($d['doctor_id'] ?? 0));
-  }
-  $newId = $maxId + 1;
-
-  // Guardar (password será definida no primeiro acesso)
-  $_SESSION['doctors'][] = [
-    'doctor_id'     => $newId,
-    'full_name'     => $full_name,
-    'license_no'    => $license_no,
-    'specialty'     => $specialty,
-    'phone'         => $phone,
-    'email'         => $email,
-    'password_hash' => null,
-  ];
-
-  header('Location: ' . $BASE_URL . '/doctors.php?success=M%C3%A9dico+criado.+A+password+%C3%A9+definida+no+primeiro+acesso');
-  exit;
 }
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -71,6 +67,9 @@ require_once __DIR__ . '/../../includes/header.php';
     O administrador cria a conta do médico. A password é definida pelo médico no primeiro acesso (via “Definir password”).
   </p>
 
+  <?php if (!empty($_GET['error'])): ?>
+    <div class="msg msg-error"><?= htmlspecialchars($_GET['error']) ?></div>
+  <?php endif; ?>
 
   <form method="POST" action="<?= $BASE_URL ?>/doctors_create.php">
     <div class="field">
