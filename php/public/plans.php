@@ -80,11 +80,22 @@ require_once __DIR__ . '/../../includes/header.php';
           <td><?= htmlspecialchars($viaPT[strtolower(trim($p['via']))] ?? $p['via']) ?></td>
           <td><?= htmlspecialchars($estadoPT[strtolower(trim($p['estado']))] ?? $p['estado']) ?></td>
 
-          <td>
-            <div class="actions">
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/plan_view.php?id=<?= urlencode((string)$p['id']) ?>">Ver</a>
-              <a class="btn btn-soft" href="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$p['id']) ?>">Editar</a>
-              <a class="btn btn-danger" href="<?= $BASE_URL ?>/plan_delete.php?id=<?= urlencode((string)$p['id']) ?>">Apagar</a>
+          <td class="actions-cell">
+            <div class="actions-wrap">
+              <a class="btn btn-soft"
+                 href="<?= $BASE_URL ?>/plan_view.php?id=<?= urlencode((string)$p['id']) ?>">
+                Ver
+              </a>
+
+              <a class="btn btn-soft"
+                 href="<?= $BASE_URL ?>/plan_edit.php?id=<?= urlencode((string)$p['id']) ?>">
+               Editar
+              </a>
+
+              <a class="btn btn-danger"
+                 href="<?= $BASE_URL ?>/plan_delete.php?id=<?= urlencode((string)$p['id']) ?>">
+                Apagar
+              </a>
             </div>
           </td>
         </tr>

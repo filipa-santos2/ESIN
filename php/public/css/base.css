@@ -1,7 +1,12 @@
-*{ margin:0; padding:0; box-sizing:border-box; }
+/* ===== RESET / BASE ===== */
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 html, body{
-  height:100%;
+  height: 100%;
   font-family: var(--font);
   background:
     radial-gradient(900px 500px at 20% 0%, rgba(79,140,255,.16), transparent 60%),
@@ -12,12 +17,12 @@ html, body{
 }
 
 /* Links */
-a{ color: var(--primary); text-decoration:none; }
-a:hover{ text-decoration:none; opacity:.92; }
+a{ color: var(--primary); text-decoration: none; }
+a:hover{ text-decoration: none; opacity: .92; }
 
 /* Tipografia */
-h1{ font-size:2.1rem; letter-spacing:-.02em; margin: 0 0 var(--s-2) 0; }
-h2{ font-size:1.5rem; letter-spacing:-.01em; margin: 0 0 var(--s-2) 0; }
+h1{ font-size: 2.1rem; letter-spacing: -.02em; margin: 0 0 var(--s-2) 0; }
+h2{ font-size: 1.5rem; letter-spacing: -.01em; margin: 0 0 var(--s-2) 0; }
 h3{ margin: 0 0 var(--s-2) 0; }
 
 p{
@@ -27,21 +32,39 @@ p{
 }
 
 .container{
-  width:100%;
+  width: 100%;
   max-width: 1400px;
-  margin:0 auto;
+  margin: 0 auto;
   padding: var(--s-5) var(--s-3);
 }
 
-
-/* Card base */
+/* ===== CARD BASE (FIX BLUR/STACKING) ===== */
+/* Antes: backdrop-filter direto na .card podia criar conflitos de layers e bloquear cliques.
+   Agora: blur está num ::before com pointer-events:none e o conteúdo fica por cima. */
 .card{
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-  border:1px solid var(--border);
+  position: relative;
   border-radius: var(--r-2);
   padding: var(--s-5);
+  background: transparent; /* background passa para o ::before */
+}
+
+.card::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-2);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+  border: 1px solid var(--border);
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;   /* IMPORTANTÍSSIMO: não bloqueia botões */
+  z-index: 0;
+}
+
+.card > *{
+  position: relative;
+  z-index: 1;
 }
 
 /* Layout base para footer ficar no fundo */
@@ -51,7 +74,7 @@ body{
   flex-direction: column;
 }
 
-main{ display:block; }
+main{ display: block; }
 
 main.container{ flex: 1; }
 
@@ -59,12 +82,11 @@ main.container{
   background: transparent;
 }
 
-
 footer{
-  text-align:center;
-  padding:18px;
+  text-align: center;
+  padding: 18px;
   background: var(--surface-2);
-  border-top:1px solid var(--border);
+  border-top: 1px solid var(--border);
   color: var(--muted);
 }
 
@@ -75,40 +97,46 @@ footer{
   margin-right: auto;
 }
 
-
+/* Inputs com estilo semelhante */
 .input-like{
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.03);
 }
+
 /* ===== VISITAS: tabela mais legível ===== */
-.table-visits {
+.table-visits{
   width: 100%;
   table-layout: fixed;      /* impede colunas de explodir */
   border-collapse: collapse;
 }
 
 .table-visits th,
-.table-visits td {
+.table-visits td{
   vertical-align: middle;
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;;
 }
 
 /* larguras (ajusta se quiseres) */
-.table-visits th:nth-child(1), .table-visits td:nth-child(1) { width: 52px; }   /* ID */
-.table-visits th:nth-child(2), .table-visits td:nth-child(2) { width: 140px; }  /* Tipo */
-.table-visits th:nth-child(3), .table-visits td:nth-child(3) { width: 160px; }  /* Paciente */
-.table-visits th:nth-child(4), .table-visits td:nth-child(4) { width: 160px; }  /* Médico */
-.table-visits th:nth-child(5), .table-visits td:nth-child(5) { width: 140px; }  /* Agendada */
-.table-visits th:nth-child(6), .table-visits td:nth-child(6) { width: 120px; }  /* Início */
-.table-visits th:nth-child(7), .table-visits td:nth-child(7) { width: 120px; }  /* Fim */
-.table-visits th:nth-child(8), .table-visits td:nth-child(8) { width: 260px; }  /* Detalhes */
-.table-visits th:nth-child(9), .table-visits td:nth-child(9) { width: 220px; }  /* Ações */
+.table-visits th:nth-child(1), .table-visits td:nth-child(1){ width: 52px; }   /* ID */
+.table-visits th:nth-child(2), .table-visits td:nth-child(2){ width: 140px; }  /* Tipo */
+.table-visits th:nth-child(3), .table-visits td:nth-child(3){ width: 160px; }  /* Paciente */
+.table-visits th:nth-child(4), .table-visits td:nth-child(4){ width: 160px; }  /* Médico */
+.table-visits th:nth-child(5), .table-visits td:nth-child(5){ width: 140px; }  /* Agendada */
+.table-visits th:nth-child(6), .table-visits td:nth-child(6){ width: 120px; }  /* Início */
+.table-visits th:nth-child(7), .table-visits td:nth-child(7){ width: 120px; }  /* Fim */
+.table-visits th:nth-child(8), .table-visits td:nth-child(8){
+  width: 320px;          /* podes ajustar */
+  white-space: normal;   /* deixa quebrar por palavras */
+  overflow: hidden;
+}
+  /* Detalhes */
+.table-visits th:nth-child(9), .table-visits td:nth-child(9){ width: 220px; }  /* Ações */
 
 /* Detalhes: caixa com scroll */
-.visit-details {
+.visit-details{
   max-height: 120px;
   overflow: auto;
   padding: 8px 10px;
@@ -118,22 +146,44 @@ footer{
 }
 
 /* Ações: arrumadas e compactas */
-.visit-actions {
+.visit-actions{
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   align-items: center;
 }
 
-.visit-actions .btn {
+.visit-actions .btn{
   width: 100%;
   text-align: center;
   white-space: nowrap;
 }
 
 /* Em ecrãs pequenos: ações em coluna */
-@media (max-width: 900px) {
-  .table-visits { table-layout: auto; }
-  .visit-actions { grid-template-columns: 1fr; }
-  .table-visits th:nth-child(8), .table-visits td:nth-child(8) { width: auto; }
+@media (max-width: 900px){
+  .table-visits{ table-layout: auto; }
+  .visit-actions{ grid-template-columns: 1fr; }
+  .table-visits th:nth-child(8), .table-visits td:nth-child(8){ width: auto; }
+}
+
+/* ===== FIX VISITAS: evitar quebra letra-a-letra ===== */
+.table-visits th,
+.table-visits td{
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Detalhes */
+.table-visits th:nth-child(8),
+.table-visits td:nth-child(8){
+  width: 320px;
+  white-space: normal;
+  overflow: hidden;
+}
+
+/* Ações */
+.table-visits th:nth-child(9),
+.table-visits td:nth-child(9){
+  width: 220px;
+  white-space: nowrap;
 }

@@ -52,8 +52,9 @@ require_once __DIR__ . '/../../includes/header.php';
 </section>
 
 <section class="card">
- <div class="table-wrap">
-  <table class="table table-compact visits-table">
+ <div class="table-clip">
+  <div class="table-scroll">
+   <table class="table table-compact visits-table">
     <thead>
       <tr>
         <th>ID</th>
@@ -111,7 +112,8 @@ require_once __DIR__ . '/../../includes/header.php';
         <tr><td colspan="9" style="opacity:.75;">Ainda não existem visitas.</td></tr>
       <?php endif; ?>
     </tbody>
-  </table>
+   </table>
+  </div>
  </div>
 </section>
 
